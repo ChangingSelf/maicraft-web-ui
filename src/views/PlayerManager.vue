@@ -1,0 +1,49 @@
+<template>
+  <div class="player-manager">
+    <div class="page-header">
+      <h1>玩家管理</h1>
+      <p>管理服务器玩家和权限</p>
+    </div>
+    <div class="coming-soon">
+      <el-empty description="功能开发中，敬请期待..." />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+// 占位组件
+</script>
+
+<style scoped>
+.player-manager {
+  padding: 20px;
+  height: 100%;
+}
+
+.page-header {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+
+.page-header h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.page-header p {
+  color: #666;
+  font-size: 16px;
+}
+
+.coming-soon {
+  background: white;
+  padding: 60px 30px;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+</style>

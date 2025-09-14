@@ -361,11 +361,10 @@ onUnmounted(() => {
 
 <style scoped>
 .log-viewer {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   padding: 20px;
-  background-color: #f5f5f5;
 }
 
 .header {

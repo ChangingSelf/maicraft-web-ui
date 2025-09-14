@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router'
+import Sidebar from './components/Sidebar.vue'
 </script>
 
 <template>
-  <div id="app">
-    <RouterView />
-  </div>
+  <el-container class="app-container">
+    <Sidebar />
+    <el-main class="main-content">
+      <RouterView />
+    </el-main>
+  </el-container>
 </template>
 
 <style>
@@ -25,9 +29,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-#app {
+.app-container {
   height: 100vh;
   overflow: hidden;
+}
+
+.main-content {
+  background-color: #f5f5f5;
+  padding: 20px;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 /* Element Plus 样式覆盖 */
