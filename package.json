@@ -8,6 +8,9 @@
   },
   "scripts": {
     "dev": "vite",
+    "mock-ws": "node mock-ws-server.mjs",
+    "demo": "node demo.mjs",
+    "dev:full": "run-p mock-ws dev",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
@@ -16,9 +19,13 @@
     "format": "prettier --write src/"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@types/ws": "^8.18.1",
+    "element-plus": "^2.11.2",
     "pinia": "^3.0.3",
     "vue": "^3.5.18",
-    "vue-router": "^4.5.1"
+    "vue-router": "^4.5.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@tsconfig/node22": "^22.0.2",
@@ -36,5 +43,6 @@
     "vite": "^7.0.6",
     "vite-plugin-vue-devtools": "^8.0.0",
     "vue-tsc": "^3.0.4"
-  }
+  },
+  "packageManager": "pnpm@10.7.0+sha512.6b865ad4b62a1d9842b61d674a393903b871d9244954f652b8842c2b553c72176b278f64c463e52d40fff8aba385c235c8c9ecf5cc7de4fd78b8bb6d49633ab6"
 }
