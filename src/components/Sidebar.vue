@@ -52,6 +52,14 @@
           </template>
         </el-menu-item>
 
+        <!-- 事件查看 -->
+        <el-menu-item index="events">
+          <el-icon><List /></el-icon>
+          <template #title>
+            <span>事件查看</span>
+          </template>
+        </el-menu-item>
+
         <!-- 玩家管理 -->
         <el-sub-menu index="players">
           <template #title>
@@ -73,6 +81,14 @@
           <el-menu-item index="monitoring-resources">资源使用</el-menu-item>
           <el-menu-item index="monitoring-alerts">告警设置</el-menu-item>
         </el-sub-menu>
+
+        <!-- MCP 工具管理 -->
+        <el-menu-item index="mcp-tools">
+          <el-icon><Tools /></el-icon>
+          <template #title>
+            <span>MCP 工具</span>
+          </template>
+        </el-menu-item>
 
         <!-- 设置 -->
         <el-menu-item index="settings">
@@ -112,6 +128,8 @@ import {
   Grid,
   ArrowLeft,
   ArrowRight,
+  List,
+  Tools,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -128,6 +146,8 @@ const activeIndex = computed(() => {
   const path = route.path
   if (path === '/' || path === '/home') return 'home'
   if (path === '/logs') return 'logs'
+  if (path === '/events') return 'events'
+  if (path === '/mcp-tools') return 'mcp-tools'
   if (path.startsWith('/server')) return 'server'
   if (path.startsWith('/players')) return 'players'
   if (path.startsWith('/monitoring')) return 'monitoring'
@@ -167,6 +187,9 @@ const handleSelect = (index: string) => {
     case 'logs':
       router.push('/logs')
       break
+    case 'events':
+      router.push('/events')
+      break
     case 'server-status':
       router.push('/server/status')
       break
@@ -196,6 +219,9 @@ const handleSelect = (index: string) => {
       break
     case 'monitoring-alerts':
       router.push('/monitoring/alerts')
+      break
+    case 'mcp-tools':
+      router.push('/mcp-tools')
       break
     case 'settings':
       router.push('/settings')

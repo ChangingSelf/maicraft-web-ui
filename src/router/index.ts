@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import LogViewer from '../views/LogViewer.vue'
+import EventViewer from '../views/EventViewer.vue'
+import MCPTools from '../views/MCPTools.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -19,6 +21,14 @@ const router = createRouter({
       component: LogViewer,
       meta: {
         title: '日志查看器',
+      },
+    },
+    {
+      path: '/events',
+      name: 'events',
+      component: EventViewer,
+      meta: {
+        title: '事件查看器',
       },
     },
     // 服务器管理相关路由（占位）
@@ -46,6 +56,15 @@ const router = createRouter({
       component: () => import('../views/Monitoring.vue'),
       meta: {
         title: '系统监控',
+      },
+    },
+    // MCP 工具管理
+    {
+      path: '/mcp-tools',
+      name: 'mcp-tools',
+      component: MCPTools,
+      meta: {
+        title: 'MCP 工具管理',
       },
     },
     // 设置页面（占位）
