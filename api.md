@@ -120,7 +120,7 @@ POST /api/logs/level
 #### 连接地址
 
 ```
-ws://localhost:8000/ws/logs
+ws://localhost:20914/ws/logs
 ```
 
 #### 消息格式
@@ -854,7 +854,7 @@ GET /api/system/connections
 **连接建立:**
 
 ```javascript
-const ws = new WebSocket('ws://localhost:8000/ws/general')
+const ws = new WebSocket('ws://localhost:20914/ws/general')
 
 ws.onopen = () => {
   console.log('WebSocket connected')
@@ -991,7 +991,7 @@ app.add_middleware(
 ```bash
 # 服务器配置
 GUI_API_HOST=0.0.0.0
-GUI_API_PORT=8000
+GUI_API_PORT=20914
 
 # 安全配置
 GUI_API_SECRET_KEY=your-secret-key-here
@@ -1018,19 +1018,19 @@ RUN pip install -r requirements.txt
 
 COPY . .
 
-EXPOSE 8000
+EXPOSE 20914
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "20914"]
 ```
 
 ### 10.3 启动命令
 
 ```bash
 # 开发环境
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 0.0.0.0 --port 20914
 
 # 生产环境
-uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
+uvicorn main:app --host 0.0.0.0 --port 20914 --workers 4
 ```
 
 ## 11. 测试和调试
@@ -1047,15 +1047,15 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --workers 4
 
 ```bash
 # 测试日志 API
-curl http://localhost:8000/api/logs/history?limit=10
+curl http://localhost:20914/api/logs/history?limit=10
 
 # 测试任务 API
-curl -X POST http://localhost:8000/api/tasks \
+curl -X POST http://localhost:20914/api/tasks \
   -H "Content-Type: application/json" \
   -d '{"details": "测试任务", "done_criteria": "任务完成"}'
 
 # 测试 MCP 工具
-curl http://localhost:8000/api/mcp/tools
+curl http://localhost:20914/api/mcp/tools
 ```
 
 ## 12. 更新日志

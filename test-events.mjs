@@ -1,5 +1,5 @@
 // 测试事件API的脚本
-const API_BASE = 'http://localhost:8000/api'
+const API_BASE = 'http://localhost:20914/api'
 
 async function testEventsAPI() {
   console.log('开始测试事件API...')

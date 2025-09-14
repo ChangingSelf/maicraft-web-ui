@@ -274,7 +274,7 @@ const settings = ref({
 let refreshTimer: number | null = null
 
 // API基础URL
-const API_BASE = 'http://localhost:8000/api'
+const API_BASE = 'http://localhost:20914/api'
 
 // 计算属性
 const typeParam = computed(() => {

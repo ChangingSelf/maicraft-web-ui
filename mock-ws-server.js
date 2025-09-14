@@ -2,12 +2,12 @@ import WebSocket from 'ws'
 
 // 创建WebSocket服务器
 const wss = new WebSocket.Server({
-  port: 8000,
+  port: 20914,
   perMessageDeflate: false,
 })
 
-console.log('🚀 Mock WebSocket服务器启动在 ws://localhost:8000')
-console.log('📡 日志WebSocket端点: ws://localhost:8000/ws/logs')
+console.log('🚀 Mock WebSocket服务器启动在 ws://localhost:20914')
+console.log('📡 日志WebSocket端点: ws://localhost:20914/ws/logs')
 
 // 模拟日志消息数据
 const logMessages = [

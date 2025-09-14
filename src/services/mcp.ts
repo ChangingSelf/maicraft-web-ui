@@ -1,5 +1,5 @@
 // MCP 工具 API 服务
-const API_BASE = 'http://localhost:8000/api'
+const API_BASE = 'http://localhost:20914/api'
 
 // API 响应基础类型
 interface ApiResponse<T = any> {
