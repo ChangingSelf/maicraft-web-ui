@@ -23,34 +23,7 @@
 
     <!-- 筛选器 -->
     <div class="filters">
-      <div class="filter-section">
-        <label class="filter-label">日志级别：</label>
-        <el-checkbox-group v-model="selectedLevels" @change="updateSubscription" size="small">
-          <el-checkbox
-            v-for="level in availableLevels"
-            :key="level"
-            :label="level"
-            :value="level"
-          />
-        </el-checkbox-group>
-      </div>
-
-      <div class="filter-section">
-        <label class="filter-label">模块：</label>
-        <div class="module-filters">
-          <el-button type="text" size="small" @click="toggleAllModules" class="select-all-btn">
-            {{ selectedModules.length === availableModules.length ? '取消全选' : '全选' }}
-          </el-button>
-          <el-checkbox-group v-model="selectedModules" @change="handleModuleSelection" size="small">
-            <el-checkbox
-              v-for="module in availableModules"
-              :key="module"
-              :label="module"
-              :value="module"
-            />
-          </el-checkbox-group>
-        </div>
-      </div>
+      <FilterPanel :filters="filterConfigs" @change="handleFilterChange" />
 
       <div class="filter-section">
         <el-button type="info" icon="Setting" @click="showSettings = true" size="small">
@@ -123,6 +96,7 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, VideoPlay, VideoPause, Refresh, Setting } from '@element-plus/icons-vue'
+import FilterPanel from '@/components/FilterPanel.vue'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -158,6 +132,24 @@ const dynamicModules = ref<Set<string>>(new Set())
 
 // 配置数据
 const availableLevels = ['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'CRITICAL']
+
+// 筛选器配置
+const filterConfigs = computed(() => [
+  {
+    key: 'logLevels',
+    label: '日志级别',
+    options: availableLevels.map((level) => ({ value: level, label: level })),
+    selectedValues: selectedLevels.value,
+    showSelectAll: true,
+  },
+  {
+    key: 'modules',
+    label: '模块',
+    options: availableModules.value.map((module) => ({ value: module, label: module })),
+    selectedValues: selectedModules.value,
+    showSelectAll: true,
+  },
+])
 
 // 设置
 const settings = ref({
@@ -297,6 +289,19 @@ const subscribeToLogs = () => {
   // 如果selectedModules为空或等于availableModules，则表示订阅所有，不包含modules字段
 
   ws.send(JSON.stringify(subscription))
+}
+
+// 筛选器事件处理
+const handleFilterChange = (filterKey: string, selectedValues: string[]) => {
+  if (filterKey === 'logLevels') {
+    selectedLevels.value = selectedValues
+  } else if (filterKey === 'modules') {
+    selectedModules.value = selectedValues
+  }
+
+  if (isConnected.value) {
+    subscribeToLogs()
+  }
 }
 
 const updateSubscription = () => {

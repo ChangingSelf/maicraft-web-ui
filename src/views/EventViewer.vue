@@ -7,15 +7,14 @@
         事件查看器
       </h1>
       <div class="controls">
-        <el-button
-          type="primary"
-          icon="Refresh"
-          @click="refreshEvents"
-          :loading="loading"
-          size="small"
-        >
-          刷新
-        </el-button>
+        <WebSocketManager
+          ref="wsManager"
+          :config="wsConfig"
+          @connect="connectWebSocket"
+          @disconnect="disconnectWebSocket"
+          @message="handleWebSocketMessage"
+          @status-change="handleConnectionStatusChange"
+        />
         <el-button type="info" icon="Setting" @click="showSettings = true" size="small">
           设置
         </el-button>
@@ -48,21 +47,9 @@
 
     <!-- 筛选器 -->
     <div class="filters">
-      <div class="filter-row">
-        <div class="filter-section">
-          <label class="filter-label">事件类型：</label>
-          <el-checkbox-group v-model="selectedTypes" @change="handleFilterChange" size="small">
-            <el-checkbox
-              v-for="type in availableTypes"
-              :key="type.value"
-              :label="type.value"
-              :value="type.value"
-            >
-              {{ type.label }}
-            </el-checkbox>
-          </el-checkbox-group>
-        </div>
+      <FilterPanel :filters="filterConfigs" @change="handleFilterChange" />
 
+      <div class="filter-row">
         <div class="filter-section">
           <label class="filter-label">时间范围：</label>
           <el-date-picker
@@ -153,42 +140,21 @@
     </div>
 
     <!-- 设置对话框 -->
-    <el-dialog v-model="showSettings" title="显示设置" width="400px">
-      <div class="settings-form">
-        <el-form :model="settings" label-width="100px">
-          <el-form-item label="每页显示条数">
-            <el-select v-model="settings.pageSize" placeholder="选择每页显示条数">
-              <el-option
-                v-for="size in [20, 50, 100, 200]"
-                :key="size"
-                :label="size"
-                :value="size"
-              />
-            </el-select>
-          </el-form-item>
-          <el-form-item label="自动刷新">
-            <el-switch v-model="settings.autoRefresh" />
-          </el-form-item>
-          <el-form-item label="刷新间隔(秒)" v-if="settings.autoRefresh">
-            <el-input-number v-model="settings.refreshInterval" :min="10" :max="300" :step="10" />
-          </el-form-item>
-          <el-form-item label="显示时间戳">
-            <el-switch v-model="settings.showTimestamp" />
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showSettings = false">取消</el-button>
-          <el-button type="primary" @click="applySettings">应用</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <SettingsDialog
+      v-model="showSettings"
+      title="显示设置"
+      :settings="settingsConfig"
+      :initial-data="settings"
+      @confirm="applySettings"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
+import WebSocketManager from '@/components/WebSocketManager.vue'
+import FilterPanel from '@/components/FilterPanel.vue'
+import SettingsDialog from '@/components/SettingsDialog.vue'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -202,7 +168,7 @@ declare global {
   }
 }
 import { ElMessage } from 'element-plus'
-import { List, Refresh, Setting, Search } from '@element-plus/icons-vue'
+import { List, Setting, Search } from '@element-plus/icons-vue'
 
 // 类型定义
 interface EventItem {
@@ -211,40 +177,49 @@ interface EventItem {
   timestamp: number
 }
 
-interface EventResponse {
-  isSuccess: boolean
-  message: string
-  data: {
-    events: EventItem[]
-    total: number
-    has_more: boolean
-  }
+interface WebSocketMessage {
+  type:
+    | 'event'
+    | 'events_response'
+    | 'stats_response'
+    | 'search_response'
+    | 'error'
+    | 'pong'
+    | string
+  request_id?: string
+  success?: boolean
+  message?: string
+  data?: any
+  timestamp?: number
+  errorCode?: string
+}
+
+interface EventsResponse {
+  events: EventItem[]
+  total: number
+  has_more: boolean
 }
 
 interface StatsResponse {
-  isSuccess: boolean
-  message: string
-  data: {
-    period: string
-    stats: {
-      thinking: number
-      action: number
-      event: number
-      notice?: number
-      total: number
-    }
-    recent_events: Array<{
-      type: string
-      count: number
-    }>
+  period: string
+  stats: {
+    thinking: number
+    action: number
+    event: number
+    notice?: number
+    total: number
   }
+  recent_events: Array<{
+    type: string
+    count: number
+  }>
 }
 
 // 响应式数据
 const loading = ref(false)
 const searching = ref(false)
 const events = ref<EventItem[]>([])
-const stats = ref<StatsResponse['data'] | null>(null)
+const stats = ref<StatsResponse | null>(null)
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(50)
@@ -253,6 +228,11 @@ const selectedTypes = ref<string[]>([])
 const timeRange = ref<number[]>([])
 const showSettings = ref(false)
 
+// WebSocket相关
+const wsManager = ref()
+const requestIdCounter = ref(0)
+const pendingRequests = ref<Map<string, { resolve: Function; reject: Function }>>(new Map())
+
 // 配置数据
 const availableTypes = [
   { value: 'all', label: '全部' },
@@ -260,6 +240,58 @@ const availableTypes = [
   { value: 'action', label: '动作' },
   { value: 'event', label: '游戏事件' },
   { value: 'notice', label: '通知' },
+]
+
+// WebSocket配置
+const wsConfig = ref({
+  url: 'ws://localhost:20914/ws/events',
+  heartbeatInterval: 30000,
+  reconnectInterval: 5000,
+  maxReconnectAttempts: 5,
+})
+
+// 筛选器配置
+const filterConfigs = computed(() => [
+  {
+    key: 'eventTypes',
+    label: '事件类型',
+    options: availableTypes.filter((type) => type.value !== 'all'),
+    selectedValues: selectedTypes.value,
+    showSelectAll: true,
+  },
+])
+
+// 设置配置
+const settingsConfig = [
+  {
+    key: 'pageSize',
+    label: '每页显示条数',
+    type: 'select' as const,
+    options: [
+      { value: 20, label: '20' },
+      { value: 50, label: '50' },
+      { value: 100, label: '100' },
+      { value: 200, label: '200' },
+    ],
+  },
+  {
+    key: 'autoRefresh',
+    label: '自动刷新',
+    type: 'switch' as const,
+  },
+  {
+    key: 'refreshInterval',
+    label: '刷新间隔(秒)',
+    type: 'number' as const,
+    min: 10,
+    max: 300,
+    step: 10,
+  },
+  {
+    key: 'showTimestamp',
+    label: '显示时间戳',
+    type: 'switch' as const,
+  },
 ]
 
 // 设置
@@ -277,15 +309,15 @@ let refreshTimer: number | null = null
 const API_BASE = 'http://localhost:20914/api'
 
 // 计算属性
-const typeParam = computed(() => {
+const selectedEventTypes = computed(() => {
   if (selectedTypes.value.length === 0 || selectedTypes.value.includes('all')) {
-    return 'all'
+    return ['thinking', 'action', 'event', 'notice']
   }
-  return selectedTypes.value.join(',')
+  return selectedTypes.value
 })
 
 const startTime = computed(() => {
-  return timeRange.value && timeRange.value[0] ? timeRange.value[0] : null
+  return timeRange.value && timeRange.value[0] ? Math.floor(timeRange.value[0] / 1000) : null
 })
 
 // 工具函数
@@ -317,55 +349,193 @@ const getTypeLabel = (type: string): string => {
   return typeMap[type] || type
 }
 
-// API调用函数
+const generateRequestId = (): string => {
+  requestIdCounter.value++
+  return `req_${Date.now()}_${requestIdCounter.value}`
+}
+
+// WebSocket消息处理函数
+const sendWebSocketMessage = (message: any): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if (!wsManager.value?.sendMessage(message)) {
+      reject(new Error('WebSocket未连接'))
+      return
+    }
+
+    if (message.request_id) {
+      pendingRequests.value.set(message.request_id, { resolve, reject })
+
+      // 设置超时
+      setTimeout(() => {
+        if (pendingRequests.value.has(message.request_id)) {
+          pendingRequests.value.delete(message.request_id)
+          reject(new Error('请求超时'))
+        }
+      }, 10000) // 10秒超时
+    } else {
+      resolve(null)
+    }
+  })
+}
+
 const fetchEvents = async (page: number = 1, isSearch: boolean = false) => {
   try {
-    const params = new URLSearchParams({
-      type: typeParam.value,
-      limit: pageSize.value.toString(),
-    })
-
-    if (startTime.value) {
-      params.append('start_time', startTime.value.toString())
+    const requestId = generateRequestId()
+    const message: any = {
+      type: isSearch ? 'search' : 'get_events',
+      request_id: requestId,
     }
 
-    if (isSearch && searchKeyword.value.trim()) {
-      params.append('keyword', searchKeyword.value.trim())
-    }
-
-    const url = `${API_BASE}/events${isSearch ? '/search' : ''}?${params}`
-    const response = await fetch(url)
-    const data: EventResponse = await response.json()
-
-    if (data.isSuccess) {
-      events.value = data.data.events
-      total.value = data.data.total
+    if (isSearch) {
+      message.keyword = searchKeyword.value.trim()
+      message.limit = pageSize.value
+      if (selectedEventTypes.value.length > 0 && !selectedEventTypes.value.includes('all')) {
+        message.type = selectedEventTypes.value[0] // 搜索时只支持单个类型
+      }
     } else {
-      ElMessage.error(data.message || '获取事件数据失败')
+      message.type =
+        selectedTypes.value.length === 0 || selectedTypes.value.includes('all')
+          ? 'all'
+          : selectedTypes.value.join(',')
+      message.limit = pageSize.value
+      if (startTime.value) {
+        message.start_time = startTime.value
+      }
     }
+
+    return await sendWebSocketMessage(message)
   } catch (error) {
     console.error('获取事件数据失败:', error)
     ElMessage.error('获取事件数据失败')
+    throw error
   }
 }
 
 const fetchStats = async () => {
   try {
-    const response = await fetch(`${API_BASE}/events/stats?period=1h`)
-    const data: StatsResponse = await response.json()
-
-    if (data.isSuccess) {
-      stats.value = data.data
+    const requestId = generateRequestId()
+    const message = {
+      type: 'get_stats',
+      request_id: requestId,
+      period: '1h',
     }
+
+    return await sendWebSocketMessage(message)
   } catch (error) {
     console.error('获取统计数据失败:', error)
   }
 }
 
-// 事件处理函数
-const handleFilterChange = () => {
-  currentPage.value = 1
-  refreshEvents()
+const subscribeToEvents = () => {
+  const message = {
+    type: 'subscribe',
+    event_types: selectedEventTypes.value,
+    timestamp: Date.now(),
+  }
+
+  sendWebSocketMessage(message).catch((error) => {
+    console.error('订阅事件失败:', error)
+  })
+}
+
+// WebSocket事件处理函数
+const connectWebSocket = () => {
+  wsManager.value?.connect()
+}
+
+const disconnectWebSocket = () => {
+  wsManager.value?.disconnect()
+}
+
+const handleConnectionStatusChange = (connected: boolean) => {
+  if (connected) {
+    subscribeToEvents()
+    refreshEvents()
+  }
+}
+
+const handleWebSocketMessage = (message: WebSocketMessage) => {
+  switch (message.type) {
+    case 'events_response':
+    case 'search_response':
+      if (message.request_id && pendingRequests.value.has(message.request_id)) {
+        const { resolve } = pendingRequests.value.get(message.request_id)!
+        pendingRequests.value.delete(message.request_id)
+
+        if (message.success && message.data) {
+          events.value = message.data.events || []
+          total.value = message.data.total || 0
+          resolve(message.data)
+        } else {
+          ElMessage.error(message.message || '获取事件数据失败')
+          resolve(null)
+        }
+      }
+      loading.value = false
+      searching.value = false
+      break
+
+    case 'stats_response':
+      if (message.request_id && pendingRequests.value.has(message.request_id)) {
+        const { resolve } = pendingRequests.value.get(message.request_id)!
+        pendingRequests.value.delete(message.request_id)
+
+        if (message.success && message.data) {
+          stats.value = message.data
+          resolve(message.data)
+        } else {
+          resolve(null)
+        }
+      }
+      break
+
+    case 'event':
+      // 实时收到新事件
+      if (message.data) {
+        const newEvent: EventItem = {
+          content: message.data.content,
+          type: message.data.type,
+          timestamp: message.data.timestamp,
+        }
+
+        // 添加到事件列表开头
+        events.value.unshift(newEvent)
+
+        // 限制事件数量
+        if (events.value.length > settings.value.pageSize * 2) {
+          events.value = events.value.slice(0, settings.value.pageSize * 2)
+        }
+
+        // 更新统计数据
+        if (stats.value) {
+          stats.value.stats.total++
+          if (stats.value.stats[newEvent.type] !== undefined) {
+            stats.value.stats[newEvent.type]++
+          }
+        }
+      }
+      break
+
+    case 'error':
+      ElMessage.error(message.message || 'WebSocket错误')
+      break
+
+    case 'pong':
+      // 心跳响应，无需处理
+      break
+  }
+}
+
+// 筛选器事件处理函数
+const handleFilterChange = (filterKey: string, selectedValues: string[]) => {
+  if (filterKey === 'eventTypes') {
+    selectedTypes.value = selectedValues
+    currentPage.value = 1
+    if (wsManager.value?.isConnected) {
+      subscribeToEvents()
+      refreshEvents()
+    }
+  }
 }
 
 const handleTimeRangeChange = () => {
@@ -400,7 +570,7 @@ const performSearch = async () => {
   try {
     await fetchEvents(1, true)
     currentPage.value = 1
-  } finally {
+  } catch (error) {
     searching.value = false
   }
 }
@@ -428,13 +598,16 @@ const refreshEvents = async () => {
   loading.value = true
   try {
     await Promise.all([fetchEvents(currentPage.value), fetchStats()])
+  } catch (error) {
+    console.error('刷新事件失败:', error)
   } finally {
     loading.value = false
   }
 }
 
-const applySettings = () => {
+const applySettings = (newSettings: any) => {
   showSettings.value = false
+  settings.value = { ...settings.value, ...newSettings }
   pageSize.value = settings.value.pageSize
   refreshEvents()
 
@@ -455,13 +628,15 @@ const applySettings = () => {
 
 // 生命周期
 onMounted(() => {
-  refreshEvents()
+  // 组件挂载时自动连接WebSocket
+  connectWebSocket()
 })
 
 onUnmounted(() => {
   if (refreshTimer) {
     clearInterval(refreshTimer)
   }
+  disconnectWebSocket()
 })
 </script>
 

@@ -451,24 +451,83 @@ POST /api/tasks/batch
 
 ## 4. 事件查询功能 (Event Query)
 
-### 4.1 获取事件列表
+**注意:** 事件查询功能已完全迁移至WebSocket API，提供实时事件推送和查询功能。
+
+### 4.1 WebSocket 连接
+
+#### 连接地址
 
 ```
-GET /api/events?type=all&limit=50&start_time=1704067200000
+ws://localhost:20914/ws/events
 ```
 
-**参数说明:**
+#### 连接建立
 
-- `type`: 事件类型 (all, thinking, action, event, notice)
-- `limit`: 返回条数 (默认: 50)
-- `start_time`: 开始时间 (13位数字时间戳)
+```javascript
+const ws = new WebSocket('ws://localhost:20914/ws/events')
 
-**响应示例:**
+ws.onopen = () => {
+  console.log('事件WebSocket已连接')
+}
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  handleEventMessage(data)
+}
+
+ws.onclose = () => {
+  console.log('事件WebSocket已断开')
+}
+```
+
+### 4.2 订阅和查询
+
+#### 4.2.1 订阅事件推送
+
+**客户端发送:**
 
 ```json
 {
-  "isSuccess": true,
-  "message": "success",
+  "type": "subscribe",
+  "event_types": ["thinking", "action", "event", "notice"],
+  "timestamp": 1704067200000
+}
+```
+
+**服务端响应:**
+
+```json
+{
+  "type": "subscribed",
+  "message": "事件订阅已设置",
+  "subscription": {
+    "event_types": ["thinking", "action", "event", "notice"]
+  },
+  "timestamp": 1704067200000
+}
+```
+
+#### 4.2.2 获取事件列表
+
+**客户端发送:**
+
+```json
+{
+  "type": "get_events",
+  "request_id": "req_001",
+  "type": "all",
+  "limit": 50,
+  "start_time": 1704067200000
+}
+```
+
+**服务端响应:**
+
+```json
+{
+  "type": "events_response",
+  "request_id": "req_001",
+  "success": true,
   "data": {
     "events": [
       {
@@ -489,62 +548,169 @@ GET /api/events?type=all&limit=50&start_time=1704067200000
     ],
     "total": 20,
     "has_more": false
-  }
+  },
+  "timestamp": 1704067200000
 }
 ```
 
-### 4.2 获取事件统计
+**参数说明:**
 
-```
-GET /api/events/stats?period=1h
-```
+- `type`: 事件类型 (all, thinking, action, event, notice)
+- `limit`: 返回条数 (默认: 50, 最大: 1000)
+- `start_time`: 开始时间戳 (秒级时间戳)
+- `request_id`: 请求ID，用于匹配响应
 
-**响应示例:**
+#### 4.2.3 获取事件统计
+
+**客户端发送:**
 
 ```json
 {
-  "isSuccess": true,
-  "message": "success",
+  "type": "get_stats",
+  "request_id": "req_002",
+  "period": "1h"
+}
+```
+
+**服务端响应:**
+
+```json
+{
+  "type": "stats_response",
+  "request_id": "req_002",
+  "success": true,
   "data": {
     "period": "1h",
     "stats": {
       "thinking": 8,
       "action": 3,
       "event": 9,
-      "total": 20
+      "notice": 1
     },
     "recent_events": [
       { "type": "thinking", "count": 8 },
       { "type": "event", "count": 9 },
-      { "type": "action", "count": 3 }
+      { "type": "action", "count": 3 },
+      { "type": "notice", "count": 1 }
     ]
-  }
+  },
+  "timestamp": 1704067200000
 }
 ```
 
-### 4.3 搜索事件
+**支持的时间段:**
 
-```
-GET /api/events/search?keyword=钻石&type=action&limit=20
-```
+- `1h`: 1小时
+- `6h`: 6小时
+- `12h`: 12小时
+- `24h`, `1d`: 1天
+- `7d`: 7天
+- `30d`: 30天
 
-**响应示例:**
+#### 4.2.4 搜索事件
+
+**客户端发送:**
 
 ```json
 {
-  "isSuccess": true,
-  "message": "success",
+  "type": "search",
+  "request_id": "req_003",
+  "keyword": "钻石",
+  "type": "action",
+  "limit": 20
+}
+```
+
+**服务端响应:**
+
+```json
+{
+  "type": "search_response",
+  "request_id": "req_003",
+  "success": true,
   "data": {
     "events": [
       {
-        "content": "玩家EvilMai收集了 1 个 Diorite",
-        "type": "event",
+        "content": "成功挖掘到钻石矿石",
+        "type": "action",
         "timestamp": 1757810830.2863913
       }
     ],
     "total": 3,
     "has_more": false
-  }
+  },
+  "timestamp": 1704067200000
+}
+```
+
+### 4.3 实时事件推送
+
+当有新事件产生时，服务端会自动推送给所有订阅的客户端：
+
+```json
+{
+  "type": "event",
+  "data": {
+    "content": "玩家EvilMai收集了 1 个钻石",
+    "type": "event",
+    "timestamp": 1757810830.2863913
+  },
+  "timestamp": 1704067200000
+}
+```
+
+### 4.4 心跳和错误处理
+
+#### 心跳机制
+
+**客户端发送:**
+
+```json
+{
+  "type": "ping",
+  "timestamp": 1704067200000
+}
+```
+
+**服务端响应:**
+
+```json
+{
+  "type": "pong",
+  "timestamp": 1704067200000,
+  "server_timestamp": 1704067201000
+}
+```
+
+#### 错误响应
+
+```json
+{
+  "type": "error",
+  "request_id": "req_001",
+  "message": "关键词不能为空",
+  "timestamp": 1704067200000
+}
+```
+
+### 4.5 取消订阅
+
+**客户端发送:**
+
+```json
+{
+  "type": "unsubscribe",
+  "timestamp": 1704067200000
+}
+```
+
+**服务端响应:**
+
+```json
+{
+  "type": "unsubscribed",
+  "message": "已取消事件订阅",
+  "timestamp": 1704067200000
 }
 ```
 
@@ -1045,9 +1211,11 @@ uvicorn main:app --host 0.0.0.0 --port 20914 --workers 4
 
 ### 11.2 示例测试脚本
 
+#### REST API 测试
+
 ```bash
 # 测试日志 API
-curl http://localhost:20914/api/logs/history?limit=10
+curl http://localhost:20914/api/logs/config
 
 # 测试任务 API
 curl -X POST http://localhost:20914/api/tasks \
@@ -1058,7 +1226,111 @@ curl -X POST http://localhost:20914/api/tasks \
 curl http://localhost:20914/api/mcp/tools
 ```
 
+#### WebSocket API 测试
+
+**JavaScript测试示例:**
+
+```javascript
+// 连接到事件WebSocket
+const ws = new WebSocket('ws://localhost:20914/ws/events')
+
+ws.onopen = () => {
+  console.log('已连接到事件WebSocket')
+
+  // 订阅事件
+  ws.send(
+    JSON.stringify({
+      type: 'subscribe',
+      event_types: ['thinking', 'action', 'event'],
+      timestamp: Date.now(),
+    }),
+  )
+
+  // 获取事件列表
+  ws.send(
+    JSON.stringify({
+      type: 'get_events',
+      request_id: 'test_001',
+      type: 'all',
+      limit: 10,
+    }),
+  )
+
+  // 获取统计信息
+  ws.send(
+    JSON.stringify({
+      type: 'get_stats',
+      request_id: 'test_002',
+      period: '1h',
+    }),
+  )
+
+  // 搜索事件
+  ws.send(
+    JSON.stringify({
+      type: 'search',
+      request_id: 'test_003',
+      keyword: '测试',
+      limit: 5,
+    }),
+  )
+}
+
+ws.onmessage = (event) => {
+  const data = JSON.parse(event.data)
+  console.log('收到消息:', data)
+}
+
+ws.onclose = () => {
+  console.log('WebSocket连接已关闭')
+}
+```
+
+**Python测试示例:**
+
+```python
+import asyncio
+import websockets
+import json
+
+async def test_events_websocket():
+    uri = "ws://localhost:20914/ws/events"
+
+    async with websockets.connect(uri) as websocket:
+        # 订阅事件
+        await websocket.send(json.dumps({
+            "type": "subscribe",
+            "event_types": ["thinking", "action", "event"],
+            "timestamp": int(asyncio.get_event_loop().time() * 1000)
+        }))
+
+        # 获取事件列表
+        await websocket.send(json.dumps({
+            "type": "get_events",
+            "request_id": "test_001",
+            "type": "all",
+            "limit": 10
+        }))
+
+        # 监听响应
+        async for message in websocket:
+            data = json.loads(message)
+            print(f"收到消息: {data}")
+
+if __name__ == "__main__":
+    asyncio.run(test_events_websocket())
+```
+
 ## 12. 更新日志
+
+### v1.1.0 (2024-12-31)
+
+- **重大更新**: 事件查询功能完全迁移至WebSocket API
+- 新增实时事件推送功能，客户端可订阅特定类型的事件
+- 优化WebSocket管理器，支持多类型连接（日志、事件）
+- 增强错误处理和连接管理机制
+- 更新API端口为20914
+- 完善文档和测试示例
 
 ### v1.0.0 (2024-01-01)
 
