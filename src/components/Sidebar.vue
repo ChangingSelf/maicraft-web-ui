@@ -4,7 +4,7 @@
     <div class="sidebar-header">
       <div class="logo-section">
         <el-icon class="logo-icon" v-if="!isCollapsed"><Grid /></el-icon>
-        <h3 v-if="!isCollapsed">MaiCraft</h3>
+        <h3 v-if="!isCollapsed">Maicraft Web UI</h3>
       </div>
       <el-button
         type="text"
@@ -32,18 +32,6 @@
           </template>
         </el-menu-item>
 
-        <!-- 服务器管理 -->
-        <el-sub-menu index="server">
-          <template #title>
-            <el-icon><Monitor /></el-icon>
-            <span>服务器管理</span>
-          </template>
-          <el-menu-item index="server-status">服务器状态</el-menu-item>
-          <el-menu-item index="server-config">服务器配置</el-menu-item>
-          <el-menu-item index="server-plugins">插件管理</el-menu-item>
-          <el-menu-item index="server-backup">备份管理</el-menu-item>
-        </el-sub-menu>
-
         <!-- 日志查看 -->
         <el-menu-item index="logs">
           <el-icon><Document /></el-icon>
@@ -59,28 +47,6 @@
             <span>事件查看</span>
           </template>
         </el-menu-item>
-
-        <!-- 玩家管理 -->
-        <el-sub-menu index="players">
-          <template #title>
-            <el-icon><User /></el-icon>
-            <span>玩家管理</span>
-          </template>
-          <el-menu-item index="players-online">在线玩家</el-menu-item>
-          <el-menu-item index="players-banlist">封禁列表</el-menu-item>
-          <el-menu-item index="players-whitelist">白名单</el-menu-item>
-        </el-sub-menu>
-
-        <!-- 系统监控 -->
-        <el-sub-menu index="monitoring">
-          <template #title>
-            <el-icon><Histogram /></el-icon>
-            <span>系统监控</span>
-          </template>
-          <el-menu-item index="monitoring-performance">性能监控</el-menu-item>
-          <el-menu-item index="monitoring-resources">资源使用</el-menu-item>
-          <el-menu-item index="monitoring-alerts">告警设置</el-menu-item>
-        </el-sub-menu>
 
         <!-- 游戏监控 -->
         <el-sub-menu index="game-monitoring">
