@@ -11,6 +11,11 @@
 </template>
 
 <script setup lang="ts">
+// 定义组件名称，供keep-alive识别
+defineOptions({
+  name: 'PlayerManager',
+})
+
 // 占位组件
 </script>
 

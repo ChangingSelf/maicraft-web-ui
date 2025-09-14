@@ -412,6 +412,11 @@ import { Plus, List, Refresh, Pointer, Setting, Scissor, Star, View } from '@ele
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mcpApi, type MCPTool, type ToolCall } from '@/services/mcp'
 
+// 定义组件名称，供keep-alive识别
+defineOptions({
+  name: 'MCPTools',
+})
+
 interface BatchCall {
   tool_name: string
   parameters: Record<string, any>

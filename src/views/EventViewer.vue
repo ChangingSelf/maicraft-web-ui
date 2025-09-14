@@ -190,6 +190,11 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 
+// 定义组件名称，供keep-alive识别
+defineOptions({
+  name: 'EventViewer',
+})
+
 // 扩展 Window 接口
 declare global {
   interface Window {

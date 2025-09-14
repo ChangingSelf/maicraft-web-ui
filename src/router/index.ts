@@ -3,6 +3,10 @@ import Home from '../views/Home.vue'
 import LogViewer from '../views/LogViewer.vue'
 import EventViewer from '../views/EventViewer.vue'
 import MCPTools from '../views/MCPTools.vue'
+import Monitoring from '../views/Monitoring.vue'
+import ServerManager from '../views/ServerManager.vue'
+import PlayerManager from '../views/PlayerManager.vue'
+import Settings from '../views/Settings.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -35,7 +39,7 @@ const router = createRouter({
     {
       path: '/server/:action',
       name: 'server',
-      component: () => import('../views/ServerManager.vue'),
+      component: ServerManager,
       meta: {
         title: '服务器管理',
       },
@@ -44,7 +48,7 @@ const router = createRouter({
     {
       path: '/players/:action',
       name: 'players',
-      component: () => import('../views/PlayerManager.vue'),
+      component: PlayerManager,
       meta: {
         title: '玩家管理',
       },
@@ -53,7 +57,7 @@ const router = createRouter({
     {
       path: '/monitoring/:action',
       name: 'monitoring',
-      component: () => import('../views/Monitoring.vue'),
+      component: Monitoring,
       meta: {
         title: '系统监控',
       },
@@ -71,7 +75,7 @@ const router = createRouter({
     {
       path: '/settings',
       name: 'settings',
-      component: () => import('../views/Settings.vue'),
+      component: Settings,
       meta: {
         title: '设置',
       },

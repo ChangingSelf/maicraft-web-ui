@@ -120,9 +120,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
+import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, VideoPlay, VideoPause, Refresh, Setting } from '@element-plus/icons-vue'
+
+// 定义组件名称，供keep-alive识别
+defineOptions({
+  name: 'LogViewer',
+})
 
 // 类型定义
 interface LogEntry {
@@ -419,9 +424,27 @@ const applySettings = () => {
 // 生命周期
 onMounted(() => {
   // 默认未连接，等待用户手动连接
+  console.log('LogViewer组件被挂载')
+})
+
+onActivated(() => {
+  // 组件被激活时（从其他页面返回到日志页面）
+  // 可以在这里恢复一些状态或执行其他操作
+  console.log('LogViewer组件被激活')
+})
+
+onDeactivated(() => {
+  // 组件被停用时（离开日志页面到其他页面）
+  // 可以在这里暂停一些操作或保存状态
+  console.log('LogViewer组件被停用')
 })
 
 onUnmounted(() => {
+  // 注意：由于使用了keep-alive，组件不会被真正卸载
+  // 但为了安全起见，仍然保留断开连接的逻辑
+  // 实际上，在keep-alive模式下，onUnmounted不会被频繁调用
+  // 只有在页面刷新或组件真正被销毁时才会调用
+  console.log('LogViewer组件真正被卸载')
   disconnect()
 })
 </script>
