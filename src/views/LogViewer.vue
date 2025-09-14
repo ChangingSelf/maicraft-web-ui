@@ -67,7 +67,21 @@
           {{ log.level }}
         </div>
         <div class="log-module">{{ log.module }}</div>
-        <div class="log-message">{{ log.message }}</div>
+        <div class="log-message">
+          <span v-if="log.message.length > 200 && !expandedLogs[index]" class="message-preview">
+            {{ truncateMessage(log.message) }}
+            <el-button text size="small" @click="toggleExpand(index)" class="expand-btn">
+              展开
+            </el-button>
+          </span>
+          <span v-else-if="log.message.length > 200 && expandedLogs[index]" class="message-full">
+            {{ log.message }}
+            <el-button text size="small" @click="toggleExpand(index)" class="expand-btn">
+              收起
+            </el-button>
+          </span>
+          <span v-else class="message-normal">{{ log.message }}</span>
+        </div>
       </div>
 
       <div v-if="filteredLogs.length === 0" class="no-logs">
@@ -129,6 +143,7 @@ const selectedLevels = ref<string[]>(['INFO', 'WARNING', 'ERROR'])
 const selectedModules = ref<string[]>(['MCPClient', 'MaiAgent'])
 const showSettings = ref(false)
 const logsContainer = ref<HTMLElement>()
+const expandedLogs = ref<Record<number, boolean>>({})
 
 // 配置数据
 const availableLevels = ['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'CRITICAL']
@@ -173,6 +188,15 @@ const formatTime = (timestamp: number): string => {
 
 const getLogClass = (level: string): string => {
   return `log-${level.toLowerCase()}`
+}
+
+const toggleExpand = (index: number) => {
+  expandedLogs.value[index] = !expandedLogs.value[index]
+}
+
+const truncateMessage = (message: string): string => {
+  if (message.length <= 200) return message
+  return message.substring(0, 200) + '...'
 }
 
 // WebSocket相关方法
@@ -332,6 +356,7 @@ const clearLogs = async () => {
       type: 'warning',
     })
     logs.value = []
+    expandedLogs.value = {}
     ElMessage.success('日志已清空')
   } catch {
     // 用户取消操作
@@ -506,7 +531,22 @@ onUnmounted(() => {
 
 .log-message {
   flex: 1;
+  white-space: pre-wrap;
   word-break: break-word;
+}
+
+.message-preview,
+.message-full,
+.message-normal {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.expand-btn {
+  margin-left: 8px;
+  color: #409eff;
+  font-size: 12px;
+  padding: 2px 4px;
 }
 
 .log-trace {
