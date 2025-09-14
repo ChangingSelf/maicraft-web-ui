@@ -152,16 +152,16 @@ wss.on('connection', (ws, req) => {
 
       switch (message.type) {
         case 'subscribe':
-          console.log(
-            `📋 客户端订阅 - 级别: ${message.levels?.join(', ') || '全部'}, 模块: ${message.modules?.join(', ') || '全部'}`,
-          )
+          const levelsStr = message.levels?.join(', ') || '全部'
+          const modulesStr = message.modules ? message.modules.join(', ') : '全部'
+          console.log(`📋 客户端订阅 - 级别: ${levelsStr}, 模块: ${modulesStr}`)
           ws.send(
             JSON.stringify({
               type: 'log',
               timestamp: Date.now(),
               level: 'INFO',
               module: 'System',
-              message: `订阅成功! 级别: ${message.levels?.join(', ') || '全部'}, 模块: ${message.modules?.join(', ') || '全部'}`,
+              message: `订阅成功! 级别: ${levelsStr}, 模块: ${modulesStr}`,
             }),
           )
           break

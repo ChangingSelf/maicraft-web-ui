@@ -37,14 +37,19 @@
 
       <div class="filter-section">
         <label class="filter-label">模块：</label>
-        <el-checkbox-group v-model="selectedModules" @change="updateSubscription" size="small">
-          <el-checkbox
-            v-for="module in availableModules"
-            :key="module"
-            :label="module"
-            :value="module"
-          />
-        </el-checkbox-group>
+        <div class="module-filters">
+          <el-button type="text" size="small" @click="toggleAllModules" class="select-all-btn">
+            {{ selectedModules.length === availableModules.length ? '取消全选' : '全选' }}
+          </el-button>
+          <el-checkbox-group v-model="selectedModules" @change="handleModuleSelection" size="small">
+            <el-checkbox
+              v-for="module in availableModules"
+              :key="module"
+              :label="module"
+              :value="module"
+            />
+          </el-checkbox-group>
+        </div>
       </div>
 
       <div class="filter-section">
@@ -140,14 +145,14 @@ interface WebSocketMessage {
 const isConnected = ref(false)
 const logs = ref<LogEntry[]>([])
 const selectedLevels = ref<string[]>(['INFO', 'WARNING', 'ERROR'])
-const selectedModules = ref<string[]>(['MCPClient', 'MaiAgent'])
+const selectedModules = ref<string[]>([])
 const showSettings = ref(false)
 const logsContainer = ref<HTMLElement>()
 const expandedLogs = ref<Record<number, boolean>>({})
+const dynamicModules = ref<Set<string>>(new Set())
 
 // 配置数据
 const availableLevels = ['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'CRITICAL']
-const availableModules = ['MCPClient', 'MaiAgent', 'System', 'TaskManager', 'EventHandler']
 
 // 设置
 const settings = ref({
@@ -165,10 +170,15 @@ let heartbeatTimer: number | null = null
 const filteredLogs = computed(() => {
   return logs.value.filter((log) => {
     const levelMatch = selectedLevels.value.length === 0 || selectedLevels.value.includes(log.level)
+    // 如果没有选择任何模块，或者当前日志的模块已被选择，则显示
     const moduleMatch =
       selectedModules.value.length === 0 || selectedModules.value.includes(log.module)
     return levelMatch && moduleMatch
   })
+})
+
+const availableModules = computed(() => {
+  return Array.from(dynamicModules.value).sort()
 })
 
 // 工具函数
@@ -266,11 +276,20 @@ const toggleConnection = () => {
 const subscribeToLogs = () => {
   if (!ws || ws.readyState !== WebSocket.OPEN) return
 
-  const subscription = {
+  // 如果没有选择任何模块，或者没有可用模块，则订阅所有（发送空数组或不包含modules字段）
+  const subscription: any = {
     type: 'subscribe',
     levels: selectedLevels.value,
-    modules: selectedModules.value,
   }
+
+  // 只有当有选择特定模块时才包含modules字段
+  if (
+    selectedModules.value.length > 0 &&
+    selectedModules.value.length < availableModules.value.length
+  ) {
+    subscription.modules = selectedModules.value
+  }
+  // 如果selectedModules为空或等于availableModules，则表示订阅所有，不包含modules字段
 
   ws.send(JSON.stringify(subscription))
 }
@@ -281,10 +300,33 @@ const updateSubscription = () => {
   }
 }
 
+// 处理模块选择变化
+const handleModuleSelection = () => {
+  updateSubscription()
+}
+
+// 全选/取消全选模块
+const toggleAllModules = () => {
+  if (selectedModules.value.length === availableModules.value.length) {
+    // 取消全选
+    selectedModules.value = []
+  } else {
+    // 全选所有可用模块
+    selectedModules.value = [...availableModules.value]
+  }
+  updateSubscription()
+}
+
 const handleMessage = (data: WebSocketMessage) => {
   switch (data.type) {
     case 'log':
       if (data.timestamp && data.level && data.module && data.message) {
+        // 动态注册新模块
+        if (!dynamicModules.value.has(data.module)) {
+          dynamicModules.value.add(data.module)
+          console.log(`新模块已注册: ${data.module}`)
+        }
+
         const logEntry: LogEntry = {
           timestamp: data.timestamp,
           level: data.level,
@@ -444,6 +486,27 @@ onUnmounted(() => {
   color: #666;
   margin-right: 12px;
   min-width: 80px;
+}
+
+.module-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.select-all-btn {
+  align-self: flex-start;
+  color: #409eff;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.select-all-btn:hover {
+  border-color: #409eff;
+  background-color: #ecf5ff;
 }
 
 .logs-container {
