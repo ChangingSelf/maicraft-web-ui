@@ -7,6 +7,8 @@ import Monitoring from '../views/Monitoring.vue'
 import ServerManager from '../views/ServerManager.vue'
 import PlayerManager from '../views/PlayerManager.vue'
 import Settings from '../views/Settings.vue'
+import WorldInfo from '../views/WorldInfo.vue'
+import PlayerStatus from '../views/PlayerStatus.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,6 +80,23 @@ const router = createRouter({
       component: Settings,
       meta: {
         title: '设置',
+      },
+    },
+    // 游戏监控相关路由
+    {
+      path: '/game-monitoring/world-info',
+      name: 'world-info',
+      component: WorldInfo,
+      meta: {
+        title: '世界信息',
+      },
+    },
+    {
+      path: '/game-monitoring/player-status',
+      name: 'player-status',
+      component: PlayerStatus,
+      meta: {
+        title: '玩家状态',
       },
     },
   ],

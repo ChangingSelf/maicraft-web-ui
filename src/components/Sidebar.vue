@@ -82,6 +82,16 @@
           <el-menu-item index="monitoring-alerts">告警设置</el-menu-item>
         </el-sub-menu>
 
+        <!-- 游戏监控 -->
+        <el-sub-menu index="game-monitoring">
+          <template #title>
+            <el-icon><Monitor /></el-icon>
+            <span>游戏监控</span>
+          </template>
+          <el-menu-item index="game-world-info">世界信息</el-menu-item>
+          <el-menu-item index="game-player-status">玩家状态</el-menu-item>
+        </el-sub-menu>
+
         <!-- MCP 工具管理 -->
         <el-menu-item index="mcp-tools">
           <el-icon><Tools /></el-icon>
@@ -151,6 +161,7 @@ const activeIndex = computed(() => {
   if (path.startsWith('/server')) return 'server'
   if (path.startsWith('/players')) return 'players'
   if (path.startsWith('/monitoring')) return 'monitoring'
+  if (path.startsWith('/game-monitoring')) return 'game-monitoring'
   if (path === '/settings') return 'settings'
   return 'home'
 })
@@ -219,6 +230,12 @@ const handleSelect = (index: string) => {
       break
     case 'monitoring-alerts':
       router.push('/monitoring/alerts')
+      break
+    case 'game-world-info':
+      router.push('/game-monitoring/world-info')
+      break
+    case 'game-player-status':
+      router.push('/game-monitoring/player-status')
       break
     case 'mcp-tools':
       router.push('/mcp-tools')
