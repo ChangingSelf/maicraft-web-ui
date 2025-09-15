@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import LogViewer from '../views/LogViewer.vue'
+import MCPServerLogViewer from '../views/MCPServerLogViewer.vue'
 import EventViewer from '../views/EventViewer.vue'
 import MCPTools from '../views/MCPTools.vue'
 import Settings from '../views/Settings.vue'
@@ -23,7 +24,15 @@ const router = createRouter({
       name: 'logs',
       component: LogViewer,
       meta: {
-        title: '日志查看器',
+        title: 'Minecraft 日志查看器',
+      },
+    },
+    {
+      path: '/mcp-logs',
+      name: 'mcp-logs',
+      component: MCPServerLogViewer,
+      meta: {
+        title: 'MCP Server 日志查看器',
       },
     },
     {

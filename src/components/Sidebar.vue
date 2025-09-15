@@ -33,12 +33,14 @@
         </el-menu-item>
 
         <!-- 日志查看 -->
-        <el-menu-item index="logs">
-          <el-icon><Document /></el-icon>
+        <el-sub-menu index="logs">
           <template #title>
+            <el-icon><Document /></el-icon>
             <span>日志查看</span>
           </template>
-        </el-menu-item>
+          <el-menu-item index="minecraft-logs">Minecraft 日志</el-menu-item>
+          <el-menu-item index="mcp-server-logs">MCP Server 日志</el-menu-item>
+        </el-sub-menu>
 
         <!-- 事件查看 -->
         <el-menu-item index="events">
@@ -121,7 +123,9 @@ const showMobileSidebar = ref(false)
 const activeIndex = computed(() => {
   const path = route.path
   if (path === '/' || path === '/home') return 'home'
-  if (path === '/logs') return 'logs'
+  if (path === '/logs') return 'minecraft-logs'
+  if (path === '/mcp-logs') return 'mcp-server-logs'
+  if (path === '/logs' || path === '/mcp-logs') return 'logs'  // 用于展开子菜单
   if (path === '/events') return 'events'
   if (path === '/mcp-tools') return 'mcp-tools'
   if (path.startsWith('/server')) return 'server'
@@ -161,8 +165,11 @@ const handleSelect = (index: string) => {
     case 'home':
       router.push('/')
       break
-    case 'logs':
+    case 'minecraft-logs':
       router.push('/logs')
+      break
+    case 'mcp-server-logs':
+      router.push('/mcp-logs')
       break
     case 'events':
       router.push('/events')
