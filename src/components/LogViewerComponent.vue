@@ -7,6 +7,19 @@
         {{ props.title }}
       </h1>
       <div class="controls">
+        <!-- 频率限制状态 -->
+        <div v-if="rateLimitedCount > 0" class="rate-limit-status">
+          <el-tag type="warning" size="small"> 已限制 {{ rateLimitedCount }} 条日志 </el-tag>
+        </div>
+        <!-- 滚动状态指示器 -->
+        <div v-if="userScrolledUp || scrollPausedBySpam" class="scroll-status">
+          <el-tag :type="scrollPausedBySpam ? 'danger' : 'info'" size="small">
+            {{ scrollPausedBySpam ? '刷屏暂停' : '手动暂停' }}
+          </el-tag>
+          <el-button type="success" icon="Bottom" @click="resumeAutoScroll" size="small">
+            恢复滚动
+          </el-button>
+        </div>
         <el-button
           :type="isConnected ? 'success' : 'primary'"
           :icon="isConnected ? VideoPause : VideoPlay"
@@ -29,20 +42,73 @@
         <el-button type="info" icon="Setting" @click="showSettings = true" size="small">
           设置
         </el-button>
+        <el-button
+          type="primary"
+          :icon="statsVisible ? 'ArrowUp' : 'ArrowDown'"
+          @click="toggleStats"
+          size="small"
+        >
+          {{ statsVisible ? '隐藏统计' : '显示统计' }}
+        </el-button>
+      </div>
+    </div>
+
+    <!-- 统计面板 -->
+    <div v-if="statsVisible" class="stats-panel">
+      <div class="stats-section">
+        <h3>日志级别统计</h3>
+        <div class="stats-grid">
+          <div v-for="(count, level) in levelStats" :key="level" class="stat-item">
+            <span class="stat-label" :class="`level-${level.toLowerCase()}`">{{ level }}</span>
+            <span class="stat-value">{{ count }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <h3>模块统计</h3>
+        <div class="stats-grid">
+          <div v-for="(count, module) in moduleStats" :key="module" class="stat-item">
+            <span class="stat-label">{{ module }}</span>
+            <span class="stat-value">{{ count }}</span>
+            <span class="stat-frequency">({{ getLogFrequency(module) }}/min)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <h3>总体信息</h3>
+        <div class="stats-info">
+          <div class="info-item">
+            <span class="info-label">总日志数:</span>
+            <span class="info-value">{{ logs.length }}</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">每分钟频率:</span>
+            <span class="info-value">{{ getLogFrequency() }}/min</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">被限制日志:</span>
+            <span class="info-value">{{ rateLimitedCount }}</span>
+          </div>
+        </div>
       </div>
     </div>
 
     <!-- 日志显示区域 -->
-    <div class="logs-container" ref="logsContainer">
+    <div class="logs-container" ref="logsContainer" @scroll="handleScroll">
       <div
         v-for="(log, index) in filteredLogs"
         :key="index"
         class="log-entry"
-        :class="getLogClass(log.level)"
+        :class="[getLogClass(log.level), { 'log-merged': log.merged }]"
       >
-        <div class="log-time">{{ formatTime(log.timestamp) }}</div>
+        <div class="log-time">
+          {{ formatTime(log.merged ? log.lastTimestamp! : log.timestamp) }}
+        </div>
         <div class="log-level" :class="`level-${log.level.toLowerCase()}`">
           {{ log.level }}
+          <span v-if="log.merged" class="merge-count">×{{ log.count }}</span>
         </div>
         <div class="log-module">{{ log.module }}</div>
         <div class="log-message">
@@ -59,6 +125,9 @@
             </el-button>
           </span>
           <span v-else class="message-normal">{{ log.message }}</span>
+          <span v-if="log.merged" class="merge-indicator">
+            (合并显示，最后更新: {{ formatTime(log.lastTimestamp!) }})
+          </span>
         </div>
       </div>
 
@@ -79,6 +148,30 @@
           </el-form-item>
           <el-form-item label="最大显示条数">
             <el-input-number v-model="settings.maxLogs" :min="100" :max="10000" :step="100" />
+          </el-form-item>
+          <el-form-item label="启用日志合并">
+            <el-switch v-model="settings.enableLogMerge" />
+          </el-form-item>
+          <el-form-item label="合并间隔(毫秒)">
+            <el-input-number
+              v-model="settings.mergeInterval"
+              :min="100"
+              :max="10000"
+              :step="100"
+              :disabled="!settings.enableLogMerge"
+            />
+          </el-form-item>
+          <el-form-item label="启用频率限制">
+            <el-switch v-model="settings.enableRateLimit" />
+          </el-form-item>
+          <el-form-item label="每秒最大日志数">
+            <el-input-number
+              v-model="settings.rateLimitPerSecond"
+              :min="1"
+              :max="1000"
+              :step="1"
+              :disabled="!settings.enableRateLimit"
+            />
           </el-form-item>
         </el-form>
       </div>
@@ -124,6 +217,9 @@ interface LogEntry {
   level: string
   module: string
   message: string
+  count?: number
+  lastTimestamp?: number
+  merged?: boolean
 }
 
 interface WebSocketMessage {
@@ -144,6 +240,22 @@ const showSettings = ref(false)
 const logsContainer = ref<HTMLElement>()
 const expandedLogs = ref<Record<number, boolean>>({})
 const dynamicModules = ref<Set<string>>(new Set())
+
+// 频率限制相关
+const logTimestamps = ref<number[]>([])
+const rateLimitedCount = ref(0)
+
+// 智能滚动相关
+const userScrolledUp = ref(false)
+const scrollPausedBySpam = ref(false)
+const lastScrollCheck = ref(0)
+const spamDetectionThreshold = ref(5) // 5条日志/秒算刷屏
+
+// 统计数据相关
+const statsVisible = ref(false)
+const moduleStats = ref<Record<string, number>>({})
+const levelStats = ref<Record<string, number>>({})
+const lastStatsUpdate = ref(0)
 
 // 配置数据
 const availableLevels = ['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'CRITICAL']
@@ -171,6 +283,10 @@ const settings = ref({
   wsUrl: props.wsUrl,
   autoScroll: props.autoScroll,
   maxLogs: props.maxLogs,
+  enableLogMerge: true,
+  mergeInterval: 1000, // 合并时间间隔（毫秒）
+  enableRateLimit: false,
+  rateLimitPerSecond: 10, // 每秒最大日志条数
 })
 
 // WebSocket实例
@@ -206,6 +322,138 @@ const formatTime = (timestamp: number): string => {
   })
   const milliseconds = String(date.getMilliseconds()).padStart(3, '0')
   return `${timeString}.${milliseconds}`
+}
+
+// 频率限制检查函数
+const checkRateLimit = (): boolean => {
+  if (!settings.value.enableRateLimit) {
+    return false // 不限制
+  }
+
+  const now = Date.now()
+  const windowStart = now - 1000 // 1秒时间窗口
+
+  // 清理过期的timestamp
+  logTimestamps.value = logTimestamps.value.filter((timestamp) => timestamp > windowStart)
+
+  // 检查是否超过限制
+  if (logTimestamps.value.length >= settings.value.rateLimitPerSecond) {
+    rateLimitedCount.value++
+    return true // 超过限制，需要丢弃
+  }
+
+  // 添加当前timestamp
+  logTimestamps.value.push(now)
+  return false // 没有超过限制
+}
+
+// 刷屏检测函数
+const detectSpam = (): boolean => {
+  const now = Date.now()
+  if (now - lastScrollCheck.value < 1000) {
+    return false // 每秒只检测一次
+  }
+
+  lastScrollCheck.value = now
+  const recentLogs = logs.value.filter((log) => now - log.timestamp < 1000)
+
+  if (recentLogs.length >= spamDetectionThreshold.value) {
+    return true // 检测到刷屏
+  }
+
+  return false
+}
+
+// 检查用户是否滚动到底部
+const isScrolledToBottom = (): boolean => {
+  if (!logsContainer.value) return true
+
+  const container = logsContainer.value
+  const threshold = 50 // 距离底部50px以内算到底部
+  return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
+}
+
+// 处理滚动事件
+const handleScroll = () => {
+  if (!logsContainer.value) return
+
+  const atBottom = isScrolledToBottom()
+
+  if (!atBottom) {
+    userScrolledUp.value = true
+  } else {
+    userScrolledUp.value = false
+  }
+}
+
+// 智能滚动函数
+const smartScrollToBottom = () => {
+  if (!settings.value.autoScroll) return
+  if (userScrolledUp.value) return
+  if (scrollPausedBySpam.value) return
+
+  // 检查是否检测到刷屏
+  if (detectSpam()) {
+    scrollPausedBySpam.value = true
+    ElMessage.info('检测到日志刷屏，已暂停自动滚动')
+    return
+  }
+
+  nextTick(() => {
+    scrollToBottom()
+  })
+}
+
+// 更新统计数据
+const updateStats = () => {
+  const now = Date.now()
+  if (now - lastStatsUpdate.value < 1000) {
+    return // 每秒最多更新一次
+  }
+
+  lastStatsUpdate.value = now
+
+  // 重置统计数据
+  moduleStats.value = {}
+  levelStats.value = {}
+
+  // 统计各模块和级别的日志数量
+  logs.value.forEach((log) => {
+    // 统计模块
+    if (!moduleStats.value[log.module]) {
+      moduleStats.value[log.module] = 0
+    }
+    moduleStats.value[log.module] += log.count || 1
+
+    // 统计级别
+    if (!levelStats.value[log.level]) {
+      levelStats.value[log.level] = 0
+    }
+    levelStats.value[log.level] += log.count || 1
+  })
+}
+
+// 计算日志频率（每分钟）
+const getLogFrequency = (module?: string): number => {
+  const now = Date.now()
+  const oneMinuteAgo = now - 60000
+
+  const recentLogs = logs.value.filter((log) => {
+    const matchesModule = !module || log.module === module
+    const isRecent = log.timestamp > oneMinuteAgo
+    return matchesModule && isRecent
+  })
+
+  const totalCount = recentLogs.reduce((sum, log) => sum + (log.count || 1), 0)
+  return Math.round(totalCount)
+}
+
+// 切换统计显示
+const toggleStats = () => {
+  statsVisible.value = !statsVisible.value
+  if (statsVisible.value) {
+    updateStats()
+  }
 }
 
 const getLogClass = (level: string): string => {
@@ -346,32 +594,62 @@ const handleMessage = (data: WebSocketMessage) => {
   switch (data.type) {
     case 'log':
       if (data.timestamp && data.level && data.module && data.message) {
+        // 频率限制检查
+        if (checkRateLimit()) {
+          // 超过频率限制，丢弃此日志
+          break
+        }
+
         // 动态注册新模块
         if (!dynamicModules.value.has(data.module)) {
           dynamicModules.value.add(data.module)
           console.log(`新模块已注册: ${data.module}`)
         }
 
-        const logEntry: LogEntry = {
+        const newLogEntry: LogEntry = {
           timestamp: data.timestamp,
           level: data.level,
           module: data.module,
           message: data.message,
         }
 
-        logs.value.push(logEntry)
+        // 检查是否启用日志合并
+        if (settings.value.enableLogMerge) {
+          // 查找是否已存在相同的日志
+          const existingIndex = logs.value.findIndex(
+            (log) =>
+              !log.merged &&
+              log.level === newLogEntry.level &&
+              log.module === newLogEntry.module &&
+              log.message === newLogEntry.message &&
+              data.timestamp &&
+              log.timestamp &&
+              data.timestamp - log.timestamp <= settings.value.mergeInterval,
+          )
+
+          if (existingIndex !== -1) {
+            // 合并到现有日志
+            const existingLog = logs.value[existingIndex]
+            existingLog.count = (existingLog.count || 1) + 1
+            existingLog.lastTimestamp = data.timestamp
+            existingLog.merged = true
+            break
+          }
+        }
+
+        // 添加新日志
+        logs.value.push(newLogEntry)
 
         // 限制日志数量，保留最新的日志
         if (logs.value.length > settings.value.maxLogs) {
           logs.value = logs.value.slice(-settings.value.maxLogs)
         }
 
-        // 自动滚动到底部
-        if (settings.value.autoScroll) {
-          nextTick(() => {
-            scrollToBottom()
-          })
-        }
+        // 智能自动滚动到底部
+        smartScrollToBottom()
+
+        // 更新统计数据
+        updateStats()
       }
       break
 
@@ -415,6 +693,18 @@ const scrollToBottom = () => {
   }
 }
 
+// 恢复自动滚动
+const resumeAutoScroll = () => {
+  userScrolledUp.value = false
+  scrollPausedBySpam.value = false
+  ElMessage.success('已恢复自动滚动')
+
+  // 立即滚动到底部
+  nextTick(() => {
+    scrollToBottom()
+  })
+}
+
 const clearLogs = async () => {
   try {
     await ElMessageBox.confirm('确定要清空所有日志吗？', '提示', {
@@ -424,6 +714,11 @@ const clearLogs = async () => {
     })
     logs.value = []
     expandedLogs.value = {}
+    dynamicModules.value.clear()
+    logTimestamps.value = []
+    rateLimitedCount.value = 0
+    userScrolledUp.value = false
+    scrollPausedBySpam.value = false
     ElMessage.success('日志已清空')
   } catch {
     // 用户取消操作
@@ -504,6 +799,18 @@ onUnmounted(() => {
 .controls {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.rate-limit-status {
+  margin-right: 10px;
+}
+
+.scroll-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 10px;
 }
 
 .filters {
@@ -683,6 +990,27 @@ onUnmounted(() => {
   border-left: 3px solid #cf1322;
 }
 
+.log-merged {
+  border-left: 3px solid #722ed1;
+  background-color: rgba(114, 46, 209, 0.05);
+}
+
+.merge-count {
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 1px 4px;
+  font-size: 10px;
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+.merge-indicator {
+  color: #722ed1;
+  font-size: 11px;
+  margin-left: 8px;
+  font-style: italic;
+}
+
 .no-logs {
   display: flex;
   justify-content: center;
@@ -692,5 +1020,87 @@ onUnmounted(() => {
 
 .settings-form {
   padding: 10px 0;
+}
+
+.stats-panel {
+  background: white;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.stats-section {
+  margin-bottom: 20px;
+}
+
+.stats-section:last-child {
+  margin-bottom: 0;
+}
+
+.stats-section h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #333;
+  border-bottom: 2px solid #409eff;
+  padding-bottom: 4px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.stat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 3px solid #409eff;
+}
+
+.stat-label {
+  font-weight: 500;
+  color: #333;
+  flex: 1;
+}
+
+.stat-value {
+  font-weight: bold;
+  color: #409eff;
+  font-size: 14px;
+}
+
+.stat-frequency {
+  font-size: 12px;
+  color: #666;
+}
+
+.stats-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border-radius: 6px;
+}
+
+.info-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.info-value {
+  font-weight: bold;
+  color: #409eff;
 }
 </style>
