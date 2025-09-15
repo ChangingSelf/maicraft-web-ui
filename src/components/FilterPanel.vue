@@ -11,7 +11,7 @@
           @click="toggleAllSelection(filter)"
           class="select-all-btn"
         >
-          {{ isAllSelected(filter) ? '取消全选' : '全选' }}
+          {{ isAllSelected(filter) && !isNoneSelected(filter) ? '取消全选' : '全选' }}
         </el-button>
 
         <!-- 复选框组 -->
@@ -65,17 +65,25 @@ const emit = defineEmits<{
 
 // 工具方法
 const isAllSelected = (filter: FilterConfig): boolean => {
-  return filter.selectedValues.length === filter.options.length
+  // 空数组表示全选，选择所有选项也表示全选
+  return (
+    filter.selectedValues.length === 0 || filter.selectedValues.length === filter.options.length
+  )
+}
+
+const isNoneSelected = (filter: FilterConfig): boolean => {
+  // 使用特殊字符串表示不显示任何
+  return filter.selectedValues.length === 1 && filter.selectedValues[0] === '__NONE__'
 }
 
 const toggleAllSelection = (filter: FilterConfig) => {
-  const isSelected = isAllSelected(filter)
+  const isSelected = isAllSelected(filter) && !isNoneSelected(filter)
   if (isSelected) {
-    // 取消全选
-    filter.selectedValues = []
+    // 取消全选：设置特殊值表示不显示任何
+    filter.selectedValues = ['__NONE__']
   } else {
-    // 全选
-    filter.selectedValues = filter.options.map((option) => option.value)
+    // 全选：设置为空数组表示显示所有
+    filter.selectedValues = []
   }
   handleSelectionChange(filter)
 }

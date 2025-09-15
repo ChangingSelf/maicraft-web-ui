@@ -1,7 +1,7 @@
 <template>
   <LogViewerComponent
     title="MCP Server 日志查看器"
-    ws-url="ws://localhost:209145/ws/mcp-logs"
+    ws-url="ws://localhost:20915/ws/mcp-logs"
     :max-logs="1000"
     :auto-scroll="true"
   />

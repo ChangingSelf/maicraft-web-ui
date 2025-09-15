@@ -235,7 +235,7 @@ interface WebSocketMessage {
 const isConnected = ref(false)
 const logs = ref<LogEntry[]>([])
 const selectedLevels = ref<string[]>(['INFO', 'WARNING', 'ERROR'])
-const selectedModules = ref<string[]>([])
+const selectedModules = ref<string[]>([]) // 空数组表示全选所有模块
 const showSettings = ref(false)
 const logsContainer = ref<HTMLElement>()
 const expandedLogs = ref<Record<number, boolean>>({})
@@ -297,10 +297,38 @@ let heartbeatTimer: number | null = null
 // 计算属性
 const filteredLogs = computed(() => {
   return logs.value.filter((log) => {
-    const levelMatch = selectedLevels.value.length === 0 || selectedLevels.value.includes(log.level)
-    // 如果没有选择任何模块，或者当前日志的模块已被选择，则显示
-    const moduleMatch =
-      selectedModules.value.length === 0 || selectedModules.value.includes(log.module)
+    // 日志级别过滤逻辑
+    let levelMatch = false
+    if (selectedLevels.value.length === 0) {
+      // 空数组：显示所有日志（全选）
+      levelMatch = true
+    } else if (selectedLevels.value.length === 1 && selectedLevels.value[0] === '__NONE__') {
+      // 特殊值：不显示任何日志
+      levelMatch = false
+    } else if (selectedLevels.value.length === availableLevels.length) {
+      // 选择了所有级别：显示所有日志
+      levelMatch = true
+    } else {
+      // 选择了部分级别：只显示匹配的日志
+      levelMatch = selectedLevels.value.includes(log.level)
+    }
+
+    // 模块过滤逻辑
+    let moduleMatch = false
+    if (selectedModules.value.length === 0) {
+      // 空数组：显示所有日志（全选）
+      moduleMatch = true
+    } else if (selectedModules.value.length === 1 && selectedModules.value[0] === '__NONE__') {
+      // 特殊值：不显示任何日志
+      moduleMatch = false
+    } else if (selectedModules.value.length === availableModules.value.length) {
+      // 选择了所有模块：显示所有日志
+      moduleMatch = true
+    } else {
+      // 选择了部分模块：只显示匹配的日志
+      moduleMatch = selectedModules.value.includes(log.module)
+    }
+
     return levelMatch && moduleMatch
   })
 })
@@ -597,6 +625,49 @@ const handleMessage = (data: WebSocketMessage) => {
         // 频率限制检查
         if (checkRateLimit()) {
           // 超过频率限制，丢弃此日志
+          break
+        }
+
+        // 过滤检查：如果新日志不在指定范围内，直接丢弃
+        let shouldStore = true
+
+        // 检查日志级别
+        if (selectedLevels.value.length === 0) {
+          // 空数组：存储所有日志（全选）
+          shouldStore = true
+        } else if (selectedLevels.value.length === 1 && selectedLevels.value[0] === '__NONE__') {
+          // 特殊值：不存储任何日志
+          shouldStore = false
+        } else if (selectedLevels.value.length === availableLevels.length) {
+          // 选择了所有级别：存储所有日志
+          shouldStore = true
+        } else {
+          // 选择了部分级别：只存储匹配的日志
+          shouldStore = selectedLevels.value.includes(data.level)
+        }
+
+        // 检查模块（如果级别检查通过才继续）
+        if (shouldStore) {
+          if (selectedModules.value.length === 0) {
+            // 空数组：存储所有日志（全选）
+            shouldStore = true
+          } else if (
+            selectedModules.value.length === 1 &&
+            selectedModules.value[0] === '__NONE__'
+          ) {
+            // 特殊值：不存储任何日志
+            shouldStore = false
+          } else if (selectedModules.value.length === availableModules.value.length) {
+            // 选择了所有模块：存储所有日志
+            shouldStore = true
+          } else {
+            // 选择了部分模块：只存储匹配的日志
+            shouldStore = selectedModules.value.includes(data.module)
+          }
+        }
+
+        if (!shouldStore) {
+          // 日志不符合当前筛选条件，丢弃
           break
         }
 
