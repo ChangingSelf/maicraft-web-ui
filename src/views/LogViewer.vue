@@ -1,6 +1,6 @@
 <template>
   <LogViewerComponent
-    title="Minecraft 日志查看器"
+    title="maicraft-agent 日志查看器"
     ws-url="ws://localhost:20914/ws/logs"
     :max-logs="1000"
     :auto-scroll="true"

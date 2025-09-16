@@ -82,11 +82,11 @@
           <el-tag>{{ categoryLabels[selectedTool.category] }}</el-tag>
         </div>
 
-        <div class="detail-section" v-if="selectedTool.parameters">
+        <div class="detail-section" v-if="selectedTool.inputSchema">
           <h4>参数</h4>
           <div class="parameters-list">
             <div
-              v-for="[paramName, paramInfo] in Object.entries(selectedTool.parameters.properties)"
+              v-for="[paramName, paramInfo] in Object.entries(selectedTool.inputSchema.properties)"
               :key="paramName"
               class="parameter-item"
             >
@@ -94,7 +94,7 @@
                 <strong>{{ paramName }}</strong>
                 <el-tag size="small" type="info">{{ paramInfo.type }}</el-tag>
                 <el-tag
-                  v-if="selectedTool.parameters.required?.includes(paramName)"
+                  v-if="selectedTool.inputSchema.required?.includes(paramName)"
                   size="small"
                   type="warning"
                 >
@@ -144,9 +144,9 @@
             </el-select>
           </el-form-item>
 
-          <template v-if="callingTool.parameters">
+          <template v-if="callingTool.inputSchema">
             <el-form-item
-              v-for="[paramName, paramInfo] in Object.entries(callingTool.parameters.properties)"
+              v-for="[paramName, paramInfo] in Object.entries(callingTool.inputSchema.properties)"
               :key="paramName"
               :label="paramName"
               :prop="paramName"
@@ -241,9 +241,9 @@
                 </el-select>
               </el-form-item>
 
-              <div v-if="call.parameters" class="batch-params">
+              <div v-if="call.inputSchema" class="batch-params">
                 <el-form-item
-                  v-for="[paramName, paramInfo] in Object.entries(call.parameters)"
+                  v-for="[paramName, paramInfo] in Object.entries(call.inputSchema)"
                   :key="paramName"
                   :label="paramName"
                 >
@@ -419,7 +419,7 @@ defineOptions({
 
 interface BatchCall {
   tool_name: string
-  parameters: Record<string, any>
+  inputSchema: Record<string, any>
   params: Record<string, any>
 }
 
@@ -485,8 +485,8 @@ const enabledTools = computed(() => {
 // 表单验证规则
 const callFormRules = computed(() => {
   const rules: Record<string, any> = {}
-  if (callingTool.value?.parameters?.required) {
-    callingTool.value.parameters.required.forEach((param: string) => {
+  if (callingTool.value?.inputSchema?.required) {
+    callingTool.value.inputSchema.required.forEach((param: string) => {
       rules[param] = [{ required: true, message: `${param}为必填参数` }]
     })
   }
@@ -518,7 +518,7 @@ const getStatusType = (status: string) => {
 // 获取参数验证规则
 const getParamRules = (paramName: string, paramInfo: any) => {
   const rules = []
-  if (callingTool.value?.parameters?.required?.includes(paramName)) {
+  if (callingTool.value?.inputSchema?.required?.includes(paramName)) {
     rules.push({ required: true, message: `${paramName}为必填参数` })
   }
   if (paramInfo.type === 'number' || paramInfo.type === 'integer') {
@@ -537,48 +537,58 @@ const loadTools = async () => {
   try {
     loading.value = true
     const response = await mcpApi.getTools()
-    tools.value = response.tools
+    // 为没有 enabled 字段的工具设置默认启用状态
+    tools.value = response.tools.map((tool) => ({
+      ...tool,
+      enabled: tool.enabled !== false, // 如果没有 enabled 字段或不为 false，则默认为 true
+    }))
   } catch (error) {
     ElMessage.error('加载工具列表失败')
     console.error(error)
     // 如果API调用失败，使用模拟数据作为fallback
-    tools.value = [
+    const fallbackTools = [
       {
         name: 'move',
         description: '移动到指定位置',
-        parameters: {
+        inputSchema: {
           type: 'object',
           properties: {
-            x: { type: 'number', description: 'X坐标' },
-            y: { type: 'number', description: 'Y坐标' },
-            z: { type: 'number', description: 'Z坐标' },
+            position: {
+              type: 'object',
+              properties: {
+                x: { type: 'number', description: '目标X坐标' },
+                y: { type: 'number', description: '目标Y坐标' },
+                z: { type: 'number', description: '目标Z坐标' },
+              },
+              required: ['x', 'y', 'z'],
+            },
           },
-          required: ['x', 'y', 'z'],
+          required: ['position'],
         },
         category: 'movement',
         enabled: true,
       },
       {
         name: 'mine_block',
-        description: '挖掘指定方块',
-        parameters: {
+        description: '挖掘指定类型的方块',
+        inputSchema: {
           type: 'object',
           properties: {
-            x: { type: 'number', description: 'X坐标' },
-            y: { type: 'number', description: 'Y坐标' },
-            z: { type: 'number', description: 'Z坐标' },
-            face: {
-              type: 'string',
-              enum: ['north', 'south', 'east', 'west', 'up', 'down'],
-              description: '挖掘面',
-            },
+            name: { type: 'string', description: "方块名称，如 'stone', 'iron_ore'" },
+            count: { type: 'integer', description: '挖掘数量', default: 1 },
+            digOnly: { type: 'boolean', description: '是否只挖掘不收集', default: false },
           },
-          required: ['x', 'y', 'z'],
+          required: ['name'],
         },
         category: 'mining',
         enabled: true,
       },
     ]
+    // 为模拟数据也应用同样的处理逻辑
+    tools.value = fallbackTools.map((tool) => ({
+      ...tool,
+      enabled: tool.enabled !== false,
+    }))
   } finally {
     loading.value = false
   }
@@ -598,12 +608,12 @@ const loadCallHistory = async () => {
       {
         call_id: 'call_001',
         tool_name: 'move',
-        parameters: { x: 100, y: 64, z: 200 },
+        parameters: { position: { x: 123.5, y: 64.0, z: -456.8 } },
         status: 'success',
         timestamp: Date.now() - 3600000,
         execution_time: 2.5,
         result: {
-          content: [{ type: 'text', text: '成功移动到位置 (100, 64, 200)' }],
+          content: [{ type: 'text', text: '成功移动到位置 (123.5, 64.0, -456.8)' }],
           is_error: false,
         },
       },
@@ -664,19 +674,15 @@ const executeToolCall = async () => {
 
     // 构建调用参数
     const params: Record<string, any> = {}
-    if (callingTool.value.parameters?.properties) {
-      Object.keys(callingTool.value.parameters.properties).forEach((key) => {
+    if (callingTool.value.inputSchema?.properties) {
+      Object.keys(callingTool.value.inputSchema.properties).forEach((key) => {
         if (callForm[key] !== undefined) {
           params[key] = callForm[key]
         }
       })
     }
 
-    const result = await mcpApi.callTool(callingTool.value.name, {
-      parameters: params,
-      async: callForm.async,
-      timeout: callForm.timeout,
-    })
+    const result = await mcpApi.callTool(callingTool.value.name, params)
 
     ElMessage.success(`工具 ${callingTool.value.name} 调用成功`)
     showToolCallDialog.value = false
@@ -693,7 +699,7 @@ const executeToolCall = async () => {
 const addBatchCall = () => {
   batchCalls.value.push({
     tool_name: '',
-    parameters: {},
+    inputSchema: {},
     params: {},
   })
 }
@@ -708,7 +714,7 @@ const handleBatchToolChange = (index: number) => {
   const call = batchCalls.value[index]
   const tool = tools.value.find((t) => t.name === call.tool_name)
   if (tool) {
-    call.parameters = tool.parameters?.properties || {}
+    call.inputSchema = tool.inputSchema?.properties || {}
     call.params = {}
   }
 }
@@ -723,7 +729,7 @@ const executeBatchCall = async () => {
     // 构建批量调用数据
     const calls = batchCalls.value.map((call) => ({
       tool_name: call.tool_name,
-      parameters: call.params,
+      arguments: call.params,
     }))
 
     const result = await mcpApi.batchCallTools({

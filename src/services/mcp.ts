@@ -12,13 +12,13 @@ interface ApiResponse<T = any> {
 export interface MCPTool {
   name: string
   description: string
-  parameters: {
+  inputSchema: {
     type: string
     properties: Record<string, any>
     required?: string[]
   }
   category: string
-  enabled: boolean
+  enabled?: boolean
 }
 
 // 工具调用类型定义
@@ -49,16 +49,15 @@ export interface ToolCallsQuery {
 
 // 工具调用请求参数
 export interface ToolCallRequest {
-  parameters: Record<string, any>
-  async?: boolean
-  timeout?: number
+  tool_name: string
+  arguments: Record<string, any>
 }
 
 // 批量调用请求参数
 export interface BatchCallRequest {
   calls: Array<{
     tool_name: string
-    parameters: Record<string, any>
+    arguments: Record<string, any>
   }>
   sequential?: boolean
 }
@@ -75,7 +74,6 @@ export interface BatchCallResponse {
 // 工具列表响应
 export interface ToolsResponse {
   tools: MCPTool[]
-  categories: string[]
   total: number
 }
 
@@ -129,8 +127,12 @@ class MCPApiService {
   }
 
   // 调用工具
-  async callTool(toolName: string, request: ToolCallRequest): Promise<ToolCall> {
-    const response = await this.request<ToolCall>(`/mcp/tools/${toolName}/call`, {
+  async callTool(toolName: string, arguments_: Record<string, any>): Promise<ToolCall> {
+    const request: ToolCallRequest = {
+      tool_name: toolName,
+      arguments: arguments_,
+    }
+    const response = await this.request<ToolCall>('/mcp/tools/call', {
       method: 'POST',
       body: JSON.stringify(request),
     })
