@@ -27,10 +27,7 @@
         <span v-if="log.message.length > 200 && !expanded" class="message-preview">
           {{ truncateMessage(log.message) }}
         </span>
-        <span
-          v-else-if="log.message.length > 200 && expanded"
-          class="message-expanded"
-        >
+        <span v-else-if="log.message.length > 200 && expanded" class="message-expanded">
           <span class="message-full">{{ log.message }}</span>
         </span>
         <span v-else class="message-normal">{{ log.message }}</span>

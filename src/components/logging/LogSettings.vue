@@ -78,14 +78,14 @@ defineOptions({
 // 事件定义
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
-  'apply': [settings: Settings]
-  'close': []
+  apply: [settings: Settings]
+  close: []
 }>()
 
 // 计算属性
 const modelValue = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+  set: (value) => emit('update:modelValue', value),
 })
 
 // 事件处理
