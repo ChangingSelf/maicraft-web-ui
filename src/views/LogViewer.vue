@@ -1,5 +1,5 @@
 <template>
-  <LogViewerComponent
+  <LogViewer
     title="maicraft-agent 日志查看器"
     ws-url="ws://localhost:20914/ws/logs"
     :max-logs="1000"
@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import LogViewerComponent from '@/components/LogViewerComponent.vue'
+import LogViewer from '@/components/logging/LogViewer.vue'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({

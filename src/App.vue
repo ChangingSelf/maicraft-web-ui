@@ -9,7 +9,7 @@ const cachedComponents = computed(() => {
   const componentsToCache = [
     'LogViewer', // Minecraft日志查看器页面 - 需要保持WebSocket连接
     'MCPServerLogViewer', // MCP Server日志查看器页面 - 需要保持WebSocket连接
-    'LogViewerComponent', // 可复用的日志查看器组件 - 核心组件需要缓存
+    'LogViewer', // 可复用的日志查看器组件 - 核心组件需要缓存
     'EventViewer', // 事件查看器 - 实时事件数据
     'Monitoring', // 系统监控 - 监控数据状态
     'MCPTools', // MCP工具管理 - 工具状态和配置

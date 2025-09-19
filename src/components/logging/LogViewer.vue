@@ -1,148 +1,49 @@
 <template>
   <div class="log-viewer">
-    <!-- 页面标题 -->
+    <!-- 页面标题和控制区域 -->
     <div class="header">
       <h1 class="title">
         <el-icon class="title-icon"><Document /></el-icon>
         {{ props.title }}
       </h1>
-      <div class="controls">
-        <!-- 频率限制状态 -->
-        <div v-if="rateLimitedCount > 0" class="rate-limit-status">
-          <el-tag type="warning" size="small"> 已限制 {{ rateLimitedCount }} 条日志 </el-tag>
-        </div>
-        <!-- 滚动状态指示器 -->
-        <div v-if="userScrolledUp || scrollPausedBySpam" class="scroll-status">
-          <el-tag :type="scrollPausedBySpam ? 'danger' : 'info'" size="small">
-            {{ scrollPausedBySpam ? '刷屏暂停' : '手动暂停' }}
-          </el-tag>
-          <el-button type="success" icon="Bottom" @click="resumeAutoScroll" size="small">
-            恢复滚动
-          </el-button>
-        </div>
-        <el-button
-          :type="isConnected ? 'success' : 'primary'"
-          :icon="isConnected ? VideoPause : VideoPlay"
-          @click="toggleConnection"
-          size="small"
-        >
-          {{ isConnected ? '断开连接' : '连接服务器' }}
-        </el-button>
-        <el-button type="primary" icon="Refresh" @click="clearLogs" size="small">
-          清空日志
-        </el-button>
-      </div>
+      <LogControls
+        :is-connected="isConnected"
+        :rate-limited-count="rateLimitedCount"
+        :user-scrolled-up="userScrolledUp"
+        :scroll-paused-by-spam="scrollPausedBySpam"
+        :stats-visible="statsVisible"
+        @toggle-connection="toggleConnection"
+        @clear-logs="clearLogs"
+        @show-settings="showSettings = true"
+        @toggle-stats="toggleStats"
+        @resume-auto-scroll="resumeAutoScroll"
+      />
     </div>
 
     <!-- 筛选器 -->
     <div class="filters">
       <FilterPanel :filters="filterConfigs" @change="handleFilterChange" />
-
-      <div class="filter-section">
-        <el-button type="info" icon="Setting" @click="showSettings = true" size="small">
-          设置
-        </el-button>
-        <el-button
-          type="primary"
-          :icon="statsVisible ? 'ArrowUp' : 'ArrowDown'"
-          @click="toggleStats"
-          size="small"
-        >
-          {{ statsVisible ? '隐藏统计' : '显示统计' }}
-        </el-button>
-      </div>
     </div>
 
     <!-- 统计面板 -->
-    <div v-if="statsVisible" class="stats-panel">
-      <div class="stats-section">
-        <h3>日志级别统计</h3>
-        <div class="stats-grid">
-          <div v-for="(count, level) in levelStats" :key="level" class="stat-item">
-            <span class="stat-label" :class="`level-${level.toLowerCase()}`">{{ level }}</span>
-            <span class="stat-value">{{ count }}</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-section">
-        <h3>模块统计</h3>
-        <div class="stats-grid">
-          <div v-for="(count, module) in moduleStats" :key="module" class="stat-item">
-            <span class="stat-label">{{ module }}</span>
-            <span class="stat-value">{{ count }}</span>
-            <span class="stat-frequency">({{ getLogFrequency(module) }}/min)</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-section">
-        <h3>总体信息</h3>
-        <div class="stats-info">
-          <div class="info-item">
-            <span class="info-label">总日志数:</span>
-            <span class="info-value">{{ logs.length }}</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">每分钟频率:</span>
-            <span class="info-value">{{ getLogFrequency() }}/min</span>
-          </div>
-          <div class="info-item">
-            <span class="info-label">被限制日志:</span>
-            <span class="info-value">{{ rateLimitedCount }}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <LogStats
+      :visible="statsVisible"
+      :level-stats="levelStats"
+      :module-stats="moduleStats"
+      :total-logs="logs.length"
+      :rate-limited-count="rateLimitedCount"
+      :logs="logs"
+    />
 
     <!-- 日志显示区域 -->
     <div class="logs-container" ref="logsContainer" @scroll="handleScroll">
-      <div
+      <LogEntry
         v-for="(log, index) in filteredLogs"
         :key="index"
-        class="log-entry"
-        :class="[getLogClass(log.level), { 'log-merged': log.merged }]"
-      >
-        <!-- 展开/收起按钮 -->
-        <div class="log-expand-btn">
-          <el-button
-            v-if="log.message.length > 200"
-            :type="expandedLogs[index] ? 'primary' : 'info'"
-            size="small"
-            @click="toggleExpand(index)"
-            :icon="expandedLogs[index] ? ArrowUp : ArrowDown"
-            class="expand-toggle-btn"
-            circle
-          />
-          <div v-else class="expand-placeholder"></div>
-        </div>
-
-        <div class="log-content">
-          <div class="log-time">
-            {{ formatTime(log.merged ? log.lastTimestamp! : log.timestamp) }}
-          </div>
-          <div class="log-level" :class="`level-${log.level.toLowerCase()}`">
-            {{ log.level }}
-            <span v-if="log.merged" class="merge-count">×{{ log.count }}</span>
-          </div>
-          <div class="log-module">{{ log.module }}</div>
-          <div class="log-message">
-            <span v-if="log.message.length > 200 && !expandedLogs[index]" class="message-preview">
-              {{ truncateMessage(log.message) }}
-            </span>
-            <span
-              v-else-if="log.message.length > 200 && expandedLogs[index]"
-              class="message-expanded"
-            >
-              <span class="message-full">{{ log.message }}</span>
-            </span>
-            <span v-else class="message-normal">{{ log.message }}</span>
-            <span v-if="log.merged" class="merge-indicator">
-              (合并显示，最后更新: {{ formatTime(log.lastTimestamp!) }})
-            </span>
-          </div>
-        </div>
-      </div>
+        :log="log"
+        :expanded="expandedLogs[index]"
+        @toggle-expand="toggleExpand(index)"
+      />
 
       <div v-if="filteredLogs.length === 0" class="no-logs">
         <el-empty description="暂无日志数据" />
@@ -150,67 +51,25 @@
     </div>
 
     <!-- 设置对话框 -->
-    <el-dialog v-model="showSettings" title="连接设置" width="400px">
-      <div class="settings-form">
-        <el-form :model="settings" label-width="100px">
-          <el-form-item label="WebSocket地址">
-            <el-input v-model="settings.wsUrl" :placeholder="props.wsUrl" />
-          </el-form-item>
-          <el-form-item label="自动滚动">
-            <el-switch v-model="settings.autoScroll" />
-          </el-form-item>
-          <el-form-item label="最大显示条数">
-            <el-input-number v-model="settings.maxLogs" :min="100" :max="10000" :step="100" />
-          </el-form-item>
-          <el-form-item label="启用日志合并">
-            <el-switch v-model="settings.enableLogMerge" />
-          </el-form-item>
-          <el-form-item label="合并间隔(毫秒)">
-            <el-input-number
-              v-model="settings.mergeInterval"
-              :min="100"
-              :max="10000"
-              :step="100"
-              :disabled="!settings.enableLogMerge"
-            />
-          </el-form-item>
-          <el-form-item label="启用频率限制">
-            <el-switch v-model="settings.enableRateLimit" />
-          </el-form-item>
-          <el-form-item label="每秒最大日志数">
-            <el-input-number
-              v-model="settings.rateLimitPerSecond"
-              :min="1"
-              :max="1000"
-              :step="1"
-              :disabled="!settings.enableRateLimit"
-            />
-          </el-form-item>
-        </el-form>
-      </div>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="showSettings = false">取消</el-button>
-          <el-button type="primary" @click="applySettings">应用</el-button>
-        </span>
-      </template>
-    </el-dialog>
+    <LogSettings
+      v-model="showSettings"
+      :settings="settings"
+      :default-ws-url="props.wsUrl"
+      @apply="applySettings"
+      @close="showSettings = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import {
-  Document,
-  VideoPlay,
-  VideoPause,
-  Refresh,
-  Setting,
-  ArrowDown,
-  ArrowUp,
-} from '@element-plus/icons-vue'
+import { Document } from '@element-plus/icons-vue'
 import FilterPanel from '@/components/FilterPanel.vue'
+import LogControls from './LogControls.vue'
+import LogStats from './LogStats.vue'
+import LogEntry from './LogEntry.vue'
+import LogSettings from './LogSettings.vue'
 
 // Props定义
 interface Props {
@@ -229,7 +88,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
-  name: 'LogViewerComponent',
+  name: 'LogViewer',
 })
 
 // 类型定义
@@ -888,67 +747,12 @@ onUnmounted(() => {
   color: #409eff;
 }
 
-.controls {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.rate-limit-status {
-  margin-right: 10px;
-}
-
-.scroll-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-right: 10px;
-}
-
 .filters {
   background: white;
   padding: 16px 20px;
   border-radius: 8px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.filter-section {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.filter-section:last-child {
-  margin-bottom: 0;
-}
-
-.filter-label {
-  font-weight: 500;
-  color: #666;
-  margin-right: 12px;
-  min-width: 80px;
-}
-
-.module-filters {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.select-all-btn {
-  align-self: flex-start;
-  color: #409eff;
-  font-size: 12px;
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.select-all-btn:hover {
-  border-color: #409eff;
-  background-color: #ecf5ff;
 }
 
 .logs-container {
@@ -963,266 +767,10 @@ onUnmounted(() => {
   line-height: 1.4;
 }
 
-.log-entry {
-  display: flex;
-  align-items: flex-start;
-  padding: 8px 12px;
-  margin-bottom: 2px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  gap: 8px;
-}
-
-.log-entry:hover {
-  background-color: rgba(0, 0, 0, 0.02);
-}
-
-.log-expand-btn {
-  flex-shrink: 0;
-  margin-top: 2px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.expand-placeholder {
-  width: 28px;
-  height: 28px;
-}
-
-.expand-toggle-btn {
-  opacity: 0.7;
-  transition:
-    opacity 0.2s,
-    transform 0.2s;
-}
-
-.expand-toggle-btn:hover {
-  opacity: 1;
-  transform: scale(1.05);
-}
-
-.log-content {
-  flex: 1;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.log-time {
-  color: #999;
-  font-size: 12px;
-  min-width: 160px;
-  margin-right: 12px;
-}
-
-.log-level {
-  font-weight: bold;
-  min-width: 80px;
-  margin-right: 12px;
-  text-align: center;
-  border-radius: 3px;
-  padding: 2px 6px;
-  font-size: 12px;
-}
-
-.level-trace {
-  background-color: #f0f0f0;
-  color: #666;
-}
-
-.level-debug {
-  background-color: #e6f7ff;
-  color: #1890ff;
-}
-
-.level-info {
-  background-color: #f6ffed;
-  color: #52c41a;
-}
-
-.level-success {
-  background-color: #f6ffed;
-  color: #52c41a;
-}
-
-.level-warning {
-  background-color: #fffbe6;
-  color: #faad14;
-}
-
-.level-error {
-  background-color: #fff2f0;
-  color: #ff4d4f;
-}
-
-.level-critical {
-  background-color: #ffe6e6;
-  color: #cf1322;
-}
-
-.log-module {
-  color: #666;
-  min-width: 100px;
-  margin-right: 12px;
-  font-weight: 500;
-}
-
-.log-message {
-  flex: 1;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.message-preview,
-.message-full,
-.message-normal,
-.message-expanded {
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.log-trace {
-  border-left: 3px solid #d9d9d9;
-}
-
-.log-debug {
-  border-left: 3px solid #1890ff;
-}
-
-.log-info {
-  border-left: 3px solid #52c41a;
-}
-
-.log-success {
-  border-left: 3px solid #52c41a;
-}
-
-.log-warning {
-  border-left: 3px solid #faad14;
-}
-
-.log-error {
-  border-left: 3px solid #ff4d4f;
-}
-
-.log-critical {
-  border-left: 3px solid #cf1322;
-}
-
-.log-merged {
-  border-left: 3px solid #722ed1;
-  background-color: rgba(114, 46, 209, 0.05);
-}
-
-.merge-count {
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 10px;
-  padding: 1px 4px;
-  font-size: 10px;
-  margin-left: 4px;
-  font-weight: bold;
-}
-
-.merge-indicator {
-  color: #722ed1;
-  font-size: 11px;
-  margin-left: 8px;
-  font-style: italic;
-}
-
 .no-logs {
   display: flex;
   justify-content: center;
   align-items: center;
   height: 200px;
-}
-
-.settings-form {
-  padding: 10px 0;
-}
-
-.stats-panel {
-  background: white;
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.stats-section {
-  margin-bottom: 20px;
-}
-
-.stats-section:last-child {
-  margin-bottom: 0;
-}
-
-.stats-section h3 {
-  margin: 0 0 12px 0;
-  font-size: 16px;
-  color: #333;
-  border-bottom: 2px solid #409eff;
-  padding-bottom: 4px;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.stat-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border-left: 3px solid #409eff;
-}
-
-.stat-label {
-  font-weight: 500;
-  color: #333;
-  flex: 1;
-}
-
-.stat-value {
-  font-weight: bold;
-  color: #409eff;
-  font-size: 14px;
-}
-
-.stat-frequency {
-  font-size: 12px;
-  color: #666;
-}
-
-.stats-info {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
-}
-
-.info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background: #f0f9ff;
-  border-radius: 6px;
-}
-
-.info-label {
-  color: #666;
-  font-size: 14px;
-}
-
-.info-value {
-  font-weight: bold;
-  color: #409eff;
 }
 </style>
