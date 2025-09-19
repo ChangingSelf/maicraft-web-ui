@@ -47,6 +47,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 // Props定义
 interface Settings {
   wsUrl: string
