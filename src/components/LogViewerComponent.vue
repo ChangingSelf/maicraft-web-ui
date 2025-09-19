@@ -103,31 +103,44 @@
         class="log-entry"
         :class="[getLogClass(log.level), { 'log-merged': log.merged }]"
       >
-        <div class="log-time">
-          {{ formatTime(log.merged ? log.lastTimestamp! : log.timestamp) }}
+        <!-- 展开/收起按钮 -->
+        <div class="log-expand-btn">
+          <el-button
+            v-if="log.message.length > 200"
+            :type="expandedLogs[index] ? 'primary' : 'info'"
+            size="small"
+            @click="toggleExpand(index)"
+            :icon="expandedLogs[index] ? ArrowUp : ArrowDown"
+            class="expand-toggle-btn"
+            circle
+          />
+          <div v-else class="expand-placeholder"></div>
         </div>
-        <div class="log-level" :class="`level-${log.level.toLowerCase()}`">
-          {{ log.level }}
-          <span v-if="log.merged" class="merge-count">×{{ log.count }}</span>
-        </div>
-        <div class="log-module">{{ log.module }}</div>
-        <div class="log-message">
-          <span v-if="log.message.length > 200 && !expandedLogs[index]" class="message-preview">
-            {{ truncateMessage(log.message) }}
-            <el-button text size="small" @click="toggleExpand(index)" class="expand-btn">
-              展开
-            </el-button>
-          </span>
-          <span v-else-if="log.message.length > 200 && expandedLogs[index]" class="message-full">
-            {{ log.message }}
-            <el-button text size="small" @click="toggleExpand(index)" class="expand-btn">
-              收起
-            </el-button>
-          </span>
-          <span v-else class="message-normal">{{ log.message }}</span>
-          <span v-if="log.merged" class="merge-indicator">
-            (合并显示，最后更新: {{ formatTime(log.lastTimestamp!) }})
-          </span>
+
+        <div class="log-content">
+          <div class="log-time">
+            {{ formatTime(log.merged ? log.lastTimestamp! : log.timestamp) }}
+          </div>
+          <div class="log-level" :class="`level-${log.level.toLowerCase()}`">
+            {{ log.level }}
+            <span v-if="log.merged" class="merge-count">×{{ log.count }}</span>
+          </div>
+          <div class="log-module">{{ log.module }}</div>
+          <div class="log-message">
+            <span v-if="log.message.length > 200 && !expandedLogs[index]" class="message-preview">
+              {{ truncateMessage(log.message) }}
+            </span>
+            <span
+              v-else-if="log.message.length > 200 && expandedLogs[index]"
+              class="message-expanded"
+            >
+              <span class="message-full">{{ log.message }}</span>
+            </span>
+            <span v-else class="message-normal">{{ log.message }}</span>
+            <span v-if="log.merged" class="merge-indicator">
+              (合并显示，最后更新: {{ formatTime(log.lastTimestamp!) }})
+            </span>
+          </div>
         </div>
       </div>
 
@@ -188,7 +201,15 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document, VideoPlay, VideoPause, Refresh, Setting } from '@element-plus/icons-vue'
+import {
+  Document,
+  VideoPlay,
+  VideoPause,
+  Refresh,
+  Setting,
+  ArrowDown,
+  ArrowUp,
+} from '@element-plus/icons-vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 
 // Props定义
@@ -944,14 +965,50 @@ onUnmounted(() => {
 
 .log-entry {
   display: flex;
+  align-items: flex-start;
   padding: 8px 12px;
   margin-bottom: 2px;
   border-radius: 4px;
   transition: background-color 0.2s;
+  gap: 8px;
 }
 
 .log-entry:hover {
   background-color: rgba(0, 0, 0, 0.02);
+}
+
+.log-expand-btn {
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.expand-placeholder {
+  width: 28px;
+  height: 28px;
+}
+
+.expand-toggle-btn {
+  opacity: 0.7;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.expand-toggle-btn:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.log-content {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
 }
 
 .log-time {
@@ -1021,16 +1078,10 @@ onUnmounted(() => {
 
 .message-preview,
 .message-full,
-.message-normal {
+.message-normal,
+.message-expanded {
   white-space: pre-wrap;
   word-break: break-word;
-}
-
-.expand-btn {
-  margin-left: 8px;
-  color: #409eff;
-  font-size: 12px;
-  padding: 2px 4px;
 }
 
 .log-trace {
