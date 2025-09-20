@@ -89,17 +89,23 @@
                     v-for="(items, type) in version.changes"
                     :key="type"
                     class="change-group"
-                    v-show="items.length > 0"
+                    v-show="items && items.length > 0"
                   >
                     <div class="change-type-header">
                       <el-icon :class="`type-icon-${String(type)}`">
                         <component :is="getCommitTypeIcon(String(type))"></component>
                       </el-icon>
                       <span class="type-label">{{ getCommitTypeLabel(String(type)) }}</span>
-                      <el-tag size="mini" type="info">{{ String(items.length) }}</el-tag>
+                      <el-tag size="mini" type="info">{{
+                        String(items ? items.length : 0)
+                      }}</el-tag>
                     </div>
                     <ul class="change-list">
-                      <li v-for="(item, itemIndex) in items" :key="itemIndex" class="change-item">
+                      <li
+                        v-for="(item, itemIndex) in items || []"
+                        :key="itemIndex"
+                        class="change-item"
+                      >
                         {{ item }}
                       </li>
                     </ul>
@@ -156,14 +162,26 @@ import {
 // 响应式数据
 const loading = ref(false)
 const versionHistory = ref<VersionHistory[]>([])
-const versionInfo = ref(getVersionInfo())
+const versionInfo = ref<any>(null)
 const versionAnalysis = ref(analyzeVersionTrends())
 
 // 计算属性
-const currentVersion = computed(() => formatVersion(versionInfo.value.version))
-const lastUpdated = computed(() => versionInfo.value.lastUpdated)
-const currentVersionDate = computed(() => formatDate(versionInfo.value.buildDate))
-const buildInfo = computed(() => versionInfo.value.buildInfo)
+const currentVersion = computed(() => {
+  if (!versionInfo.value) return 'v0.0.1' // 兜底版本
+  return formatVersion(versionInfo.value.version)
+})
+const lastUpdated = computed(() => {
+  if (!versionInfo.value) return '2025-09-20' // 兜底日期
+  return versionInfo.value.lastUpdated
+})
+const currentVersionDate = computed(() => {
+  if (!versionInfo.value) return '2025年9月20日' // 兜底日期
+  return formatDate(versionInfo.value.buildDate)
+})
+const buildInfo = computed(() => {
+  if (!versionInfo.value) return 'Vue 3 + TypeScript + Vite' // 兜底信息
+  return versionInfo.value.buildInfo
+})
 
 // 获取版本历史数据
 const fetchChangelog = async () => {
@@ -241,17 +259,39 @@ const getVersionTypeIcon = (type: string) => {
   return icons[type] || '📦'
 }
 
+// 获取版本信息
+const fetchVersionInfo = async () => {
+  try {
+    const info = await getVersionInfo()
+    versionInfo.value = info
+  } catch (error) {
+    console.warn('获取版本信息失败:', error)
+    // 使用兜底值
+    versionInfo.value = {
+      version: '0.16.1',
+      name: 'Maicraft Web UI',
+      description: 'Minecraft 服务器监控和管理界面',
+      buildDate: '2025-09-20',
+      buildTime: '15:59:48',
+      buildInfo: 'Vue 3 + TypeScript + Vite',
+      author: 'ChangingSelf',
+      repository: 'https://github.com/ChangingSelf/maicraft-web-ui',
+      license: 'MIT',
+      lastUpdated: '2025-09-20',
+    }
+  }
+}
+
 // 刷新版本信息
 const refreshChangelog = () => {
   fetchChangelog()
-  // 重新获取版本信息
-  versionInfo.value = getVersionInfo()
+  fetchVersionInfo()
   versionAnalysis.value = analyzeVersionTrends()
 }
 
-// 组件挂载时获取更新日志
-onMounted(() => {
-  fetchChangelog()
+// 组件挂载时获取更新日志和版本信息
+onMounted(async () => {
+  await Promise.all([fetchChangelog(), fetchVersionInfo()])
 })
 </script>
 

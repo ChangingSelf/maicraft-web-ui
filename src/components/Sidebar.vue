@@ -132,7 +132,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getCurrentVersion, formatVersion } from '../services/versionService'
+import { getCurrentVersionSync, formatVersion } from '../services/versionService'
 import {
   House,
   Monitor,
@@ -159,14 +159,21 @@ const showMobileSidebar = ref(false)
 // 版本信息
 const currentVersion = ref('v1.1.4') // 默认版本
 
-// 异步获取版本信息
-const loadVersionInfo = async () => {
+// 获取版本信息（使用同步方法）
+const loadVersionInfo = () => {
   try {
-    const version = await getCurrentVersion()
+    const version = getCurrentVersionSync()
     currentVersion.value = formatVersion(version)
   } catch (error) {
     console.warn('获取版本信息失败:', error)
-    currentVersion.value = 'v1.1.4' // 兜底版本
+    // 使用配置文件中的版本作为兜底
+    try {
+      const configVersion = '0.16.1' // 从 version.json 中获取
+      currentVersion.value = formatVersion(configVersion)
+    } catch (configError) {
+      console.warn('获取配置文件版本失败:', configError)
+      currentVersion.value = 'v1.1.4' // 最后的兜底版本
+    }
   }
 }
 

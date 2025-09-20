@@ -81,7 +81,7 @@ class VersionService {
     this.loadPackageVersion()
   }
 
-  // 从 package.json 加载版本信息（带重试机制）
+  // 从 package.json 加载版本信息（简化版本，直接使用本地导入）
   private async loadPackageVersion(): Promise<void> {
     if (this.isPackageVersionLoaded) {
       return
@@ -91,52 +91,29 @@ class VersionService {
       return this.packageVersionLoadPromise
     }
 
-    this.packageVersionLoadPromise = this.loadPackageVersionWithRetry()
+    this.packageVersionLoadPromise = this.loadPackageVersionFromImport()
 
     try {
       await this.packageVersionLoadPromise
     } catch (error) {
       // 即使加载失败也不要抛出异常，只记录警告
       console.warn('VersionService: Failed to load package version:', error)
-      this.packageVersion = '0.0.0'
+      // 使用配置文件中的版本作为兜底
+      this.packageVersion = this.versionConfig.current
     } finally {
       this.isPackageVersionLoaded = true
     }
   }
 
-  private async loadPackageVersionWithRetry(maxRetries = 3): Promise<void> {
-    let lastError: Error | null = null
-
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await httpClient.get<{ version: string }>('/package.json', {
-          timeout: 5000, // 5秒超时
-          retry: false, // 手动处理重试
-        })
-
-        if (response.isSuccess && response.data?.version) {
-          this.packageVersion = response.data.version
-          return
-        } else {
-          throw new VersionServiceError('Invalid package.json response', 'INVALID_PACKAGE_RESPONSE')
-        }
-      } catch (error) {
-        lastError = error as Error
-        console.warn(`VersionService: Attempt ${attempt}/${maxRetries} failed:`, error)
-
-        // 如果不是最后一次尝试，等待后重试
-        if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)) // 递增延迟
-        }
-      }
+  private async loadPackageVersionFromImport(): Promise<void> {
+    try {
+      // 直接使用配置文件中的版本，避免动态导入JSON文件的复杂性
+      this.packageVersion = this.versionConfig.current
+    } catch (error) {
+      console.warn('VersionService: Failed to load package version:', error)
+      // 使用配置文件中的版本作为兜底
+      this.packageVersion = this.versionConfig.current
     }
-
-    // 所有重试都失败了
-    throw new VersionServiceError(
-      `Failed to load package version after ${maxRetries} attempts`,
-      'PACKAGE_LOAD_FAILED',
-      lastError || undefined,
-    )
   }
 
   // 获取当前版本信息
