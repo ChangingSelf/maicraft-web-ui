@@ -442,3 +442,98 @@ export interface WSTokenSubscribeMessage extends WebSocketMessage {
   update_interval: number
   model_filter: string | null
 }
+
+// 任务管理相关类型
+export interface Task {
+  id: string
+  details: string
+  done_criteria?: string
+  progress?: string
+  done: boolean
+}
+
+export interface TaskStats {
+  total: number
+  completed: number
+  pending: number
+  goal: string
+  is_done: boolean
+}
+
+// 任务WebSocket消息类型
+export interface WSTaskSubscribeMessage extends WebSocketMessage {
+  type: 'subscribe'
+  update_interval: number
+}
+
+export interface WSTaskListMessage extends WebSocketMessage {
+  type: 'get_tasks'
+}
+
+export interface WSTaskAddMessage extends WebSocketMessage {
+  type: 'add_task'
+  details: string
+  done_criteria: string
+  progress?: string
+}
+
+export interface WSTaskUpdateMessage extends WebSocketMessage {
+  type: 'update_task'
+  task_id: string
+  progress: string
+}
+
+export interface WSTaskDeleteMessage extends WebSocketMessage {
+  type: 'delete_task'
+  task_id: string
+}
+
+export interface WSTaskMarkDoneMessage extends WebSocketMessage {
+  type: 'mark_done'
+  task_id: string
+}
+
+export interface WSTaskUnsubscribeMessage extends WebSocketMessage {
+  type: 'unsubscribe'
+}
+
+// 任务响应消息类型
+export interface WSTaskResponse extends WebSocketMessage {
+  type:
+    | 'subscribed'
+    | 'unsubscribed'
+    | 'task_added'
+    | 'task_updated'
+    | 'task_deleted'
+    | 'task_marked_done'
+  message: string
+  data?: any
+  timestamp: number
+}
+
+export interface WSTasksListResponse extends WebSocketMessage {
+  type: 'tasks_list'
+  message: string
+  data: {
+    tasks: Task[]
+    total: number
+    completed: number
+    pending: number
+    goal: string
+    is_done: boolean
+  }
+  timestamp: number
+}
+
+export interface WSTasksUpdateResponse extends WebSocketMessage {
+  type: 'tasks_update'
+  timestamp: number
+  data: {
+    tasks: Task[]
+    total: number
+    completed: number
+    pending: number
+    goal: string
+    is_done: boolean
+  }
+}

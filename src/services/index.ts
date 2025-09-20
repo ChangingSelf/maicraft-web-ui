@@ -2,8 +2,31 @@
 // 提供所有服务的统一入口，便于管理和使用
 
 // HTTP客户端和配置
+import { httpClient } from './httpClient'
 export { httpClient, api } from './httpClient'
 export { API_CONFIG, getApiBaseURL, getApiTimeout, isDebugMode } from '../config/api.config'
+
+// WebSocket管理器
+import {
+  getWebSocketManager,
+  getAllWebSocketManagers,
+  connectWebSocket,
+  disconnectWebSocket,
+  disconnectAllWebSockets,
+  getWebSocketStatus,
+  subscribeWebSocket,
+  unsubscribeWebSocket,
+  sendWebSocketMessage,
+} from './websocket'
+
+// 核心API服务
+import { mcpApi } from './mcp'
+import { logService } from './logService'
+import { environmentService } from './environmentService'
+import { actionService } from './actionService'
+import { locationService } from './locationService'
+import { gameObjectService } from './gameObjectService'
+import { getTaskService } from './taskService'
 
 // WebSocket管理器
 export {
@@ -18,8 +41,10 @@ export {
   unsubscribeWebSocket,
   sendWebSocketMessage,
   WS_ENDPOINTS,
-  WSEndpointType,
 } from './websocket'
+
+// WebSocket端点类型 - 单独导出类型
+export type { WSEndpointType } from './websocket'
 
 // 全局错误处理器
 export {
@@ -64,12 +89,13 @@ export type {
 } from './interceptors'
 
 // 核心API服务
-export { mcpApi, mcpService } from './mcp'
+export { mcpApi } from './mcp'
 export { logService } from './logService'
 export { environmentService } from './environmentService'
 export { actionService } from './actionService'
 export { locationService } from './locationService'
 export { gameObjectService } from './gameObjectService'
+export { getTaskService, TaskService, connectTaskWS, disconnectTaskWS } from './taskService'
 
 // 便捷服务方法导出
 export {
@@ -117,6 +143,8 @@ export {
   getBlockAt,
 } from './gameObjectService'
 
+export { getTaskService as getTasks } from './taskService'
+
 // 类型定义导出
 export type {
   ApiResponse,
@@ -146,6 +174,7 @@ export type {
   ActionType,
   ActionInfo,
   ActionResult,
+  Task,
   WebSocketMessage,
   WSHeartbeatMessage,
   WSLogMessage,
@@ -175,6 +204,7 @@ export const services = {
   actions: actionService,
   locations: locationService,
   gameObjects: gameObjectService,
+  tasks: getTaskService(),
 }
 
 // 默认导出所有服务

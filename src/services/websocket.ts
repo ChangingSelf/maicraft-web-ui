@@ -1,6 +1,19 @@
 import { reactive, computed } from 'vue'
 import { useSettingsStore } from '../stores/settings'
 
+// WebSocket端点类型
+export type WSEndpointType =
+  | 'PLAYER'
+  | 'WORLD'
+  | 'MARKER'
+  | 'LOGS'
+  | 'LOGS_ALT'
+  | 'TOKEN_USAGE'
+  | 'EVENTS'
+  | 'TASK_MANAGER'
+  | 'GENERAL'
+  | 'STATUS'
+
 // WebSocket端点配置 - 懒初始化
 let _wsEndpoints: ReturnType<typeof computed<Record<WSEndpointType, string>>> | null = null
 
@@ -20,7 +33,7 @@ const getWsEndpoints = () => {
       // 监控和统计端点
       TOKEN_USAGE: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/token-usage`,
       EVENTS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/events`,
-      TASK_MANAGER: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/task-manager`,
+      TASK_MANAGER: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/tasks`,
 
       // 通用端点
       GENERAL: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws`,
@@ -44,19 +57,6 @@ export const WS_ENDPOINTS = {
     return getWsEndpointsValue()
   },
 }
-
-// WebSocket端点类型
-export type WSEndpointType =
-  | 'PLAYER'
-  | 'WORLD'
-  | 'MARKER'
-  | 'LOGS'
-  | 'LOGS_ALT'
-  | 'TOKEN_USAGE'
-  | 'EVENTS'
-  | 'TASK_MANAGER'
-  | 'GENERAL'
-  | 'STATUS'
 
 // WebSocket连接状态
 export interface WSConnection {

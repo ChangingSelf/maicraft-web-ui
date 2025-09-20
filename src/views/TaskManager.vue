@@ -2,23 +2,68 @@
   <div class="task-manager-page">
     <!-- 页面头部 -->
     <div class="page-header">
-      <h2>任务管理</h2>
+      <div class="header-title">
+        <h2>任务管理</h2>
+        <div class="connection-status">
+          <el-tag :type="isConnected ? 'success' : 'danger'" size="small">
+            {{ isConnected ? '已连接' : '未连接' }}
+          </el-tag>
+          <span v-if="connectionError" class="connection-error">{{ connectionError }}</span>
+          <el-button
+            v-if="!isConnected && connectionError"
+            size="small"
+            type="text"
+            @click="showConnectionHelp"
+            style="margin-left: 8px"
+          >
+            连接帮助
+          </el-button>
+        </div>
+      </div>
       <div class="header-actions">
-        <el-button type="primary" :icon="Plus" @click="showCreateDialog = true">
+        <!-- 连接按钮 - 当未连接时显示 -->
+        <el-button
+          v-if="!isConnected"
+          type="warning"
+          :icon="Connection"
+          @click="connectToTaskService"
+          :loading="connecting"
+        >
+          连接服务
+        </el-button>
+
+        <!-- 主要操作按钮 -->
+        <el-button
+          type="primary"
+          :icon="Plus"
+          @click="showCreateDialog = true"
+          :disabled="!isConnected"
+        >
           新建任务
         </el-button>
-        <el-button type="success" :icon="List" @click="showBatchDialog = true">
+        <el-button
+          type="success"
+          :icon="List"
+          @click="showBatchDialog = true"
+          :disabled="!isConnected"
+        >
           批量操作
         </el-button>
         <el-button
           type="danger"
           :icon="Delete"
           @click="clearAllTasks"
-          :disabled="tasks.length === 0"
+          :disabled="tasks.length === 0 || !isConnected"
         >
           清空所有
         </el-button>
-        <el-button type="info" :icon="Refresh" @click="refreshTasks" :loading="loading">
+        <el-button
+          type="info"
+          :icon="Refresh"
+          @click="refreshTasks"
+          :loading="loading"
+          :disabled="!isConnected"
+        >
           刷新
         </el-button>
       </div>
@@ -26,6 +71,14 @@
 
     <!-- 任务统计 -->
     <div class="stats-section">
+      <div v-if="taskStats.goal" class="goal-section">
+        <el-alert
+          :title="`当前目标: ${taskStats.goal}`"
+          :type="taskStats.is_all_done ? 'success' : 'info'"
+          :closable="false"
+          show-icon
+        />
+      </div>
       <el-row :gutter="20">
         <el-col :span="4">
           <el-card class="stat-card" shadow="hover">
@@ -34,7 +87,7 @@
                 <el-icon><Document /></el-icon>
               </div>
               <div class="stat-info">
-                <div class="stat-value">{{ tasks.length }}</div>
+                <div class="stat-value">{{ taskStats.total }}</div>
                 <div class="stat-label">总任务</div>
               </div>
             </div>
@@ -49,19 +102,6 @@
               <div class="stat-info">
                 <div class="stat-value">{{ taskStats.pending }}</div>
                 <div class="stat-label">待处理</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card class="stat-card" shadow="hover">
-            <div class="stat-content">
-              <div class="stat-icon">
-                <el-icon><Loading /></el-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-value">{{ taskStats.in_progress }}</div>
-                <div class="stat-label">进行中</div>
               </div>
             </div>
           </el-card>
@@ -88,19 +128,6 @@
               <div class="stat-info">
                 <div class="stat-value">{{ taskStats.is_all_done ? '是' : '否' }}</div>
                 <div class="stat-label">全部完成</div>
-              </div>
-            </div>
-          </el-card>
-        </el-col>
-        <el-col :span="4">
-          <el-card class="stat-card" shadow="hover">
-            <div class="stat-content">
-              <div class="stat-icon">
-                <el-icon><Timer /></el-icon>
-              </div>
-              <div class="stat-info">
-                <div class="stat-value">{{ taskStats.total_time || 0 }}</div>
-                <div class="stat-label">总耗时(s)</div>
               </div>
             </div>
           </el-card>
@@ -302,11 +329,67 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 连接帮助对话框 -->
+    <el-dialog v-model="showHelpDialog" title="连接帮助" width="700px">
+      <div class="connection-help">
+        <el-alert
+          title="WebSocket连接失败"
+          description="无法连接到任务管理服务，请检查以下配置："
+          type="warning"
+          :closable="false"
+          style="margin-bottom: 20px"
+        />
+
+        <div class="help-content">
+          <h4>🔧 检查项目</h4>
+          <ul>
+            <li><strong>后端服务状态：</strong>确保MaicraftAgent后端服务正在运行</li>
+            <li><strong>端口配置：</strong>后端服务应运行在端口 <code>20914</code></li>
+            <li><strong>WebSocket端点：</strong>确保后端支持 <code>/ws/tasks</code> 端点</li>
+          </ul>
+
+          <h4>📡 连接信息</h4>
+          <div class="connection-info">
+            <p><strong>WebSocket URL:</strong> <code>ws://localhost:20914/ws/tasks</code></p>
+            <p>
+              <strong>状态:</strong>
+              <span :class="{ 'text-success': isConnected, 'text-danger': !isConnected }">
+                {{ isConnected ? '已连接' : '未连接' }}
+              </span>
+            </p>
+            <p v-if="connectionError"><strong>错误:</strong> {{ connectionError }}</p>
+          </div>
+
+          <h4>🔍 故障排除步骤</h4>
+          <ol>
+            <li>检查后端服务是否在运行：<code>netstat -ano | findstr 20914</code></li>
+            <li>检查防火墙设置，确保端口20914未被阻止</li>
+            <li>查看后端服务日志，确认WebSocket服务已启动</li>
+            <li>尝试重启后端服务</li>
+            <li>如果端口被占用，更改配置中的端口号</li>
+          </ol>
+
+          <h4>⚙️ 配置检查</h4>
+          <p>当前WebSocket配置：</p>
+          <pre>{{
+            JSON.stringify({ host: 'localhost', port: 20914, endpoint: '/ws/tasks' }, null, 2)
+          }}</pre>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="showHelpDialog = false">关闭</el-button>
+        <el-button type="primary" @click="connectToTaskService" :disabled="connecting">
+          {{ connecting ? '连接中...' : '重新连接' }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, reactive, onMounted } from 'vue'
+import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
 import {
   Plus,
   List,
@@ -318,36 +401,32 @@ import {
   Check,
   Star,
   Timer,
+  Connection,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { getTaskService, type Task } from '../services'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
   name: 'TaskManager',
 })
 
-// 接口定义
-interface Task {
-  id: string
-  details: string
-  done_criteria?: string
-  progress?: string
-  done: boolean
-}
+// 获取任务服务实例
+const taskService = getTaskService()
 
 // 响应式数据
-const loading = ref(false)
 const saving = ref(false)
 const batchOperating = ref(false)
 const updatingTask = ref<string | null>(null)
+const connecting = ref(false)
 
-const tasks = ref<Task[]>([])
 const selectedTask = ref<Task | null>(null)
 const editingTask = ref<Task | null>(null)
 
 const showCreateDialog = ref(false)
 const showDetailDialog = ref(false)
 const showBatchDialog = ref(false)
+const showHelpDialog = ref(false)
 
 const statusFilter = ref('')
 
@@ -372,27 +451,26 @@ const taskFormRules = {
 
 // 计算属性
 const taskStats = computed(() => {
-  const stats = {
-    pending: 0,
-    in_progress: 0,
-    completed: 0,
-    total: tasks.value.length,
-    is_all_done: false,
-    total_time: 0,
+  const stats = taskService.getTaskStats()
+  return {
+    pending: stats.pending,
+    in_progress: 0, // 接口中没有进行中状态，直接设为0
+    completed: stats.completed,
+    total: stats.total,
+    is_all_done: stats.is_done,
+    is_done: stats.is_done,
+    total_time: 0, // 接口中没有总耗时信息
+    goal: stats.goal,
   }
-
-  tasks.value.forEach((task) => {
-    if (task.done) {
-      stats.completed++
-    } else {
-      stats.pending++
-    }
-  })
-
-  stats.is_all_done = stats.completed === stats.total && stats.total > 0
-
-  return stats
 })
+
+const tasks = computed(() => taskService.state.tasks)
+
+const loading = computed(() => taskService.state.loading)
+
+const connectionError = computed(() => taskService.state.error)
+
+const isConnected = computed(() => taskService.state.isConnected)
 
 const filteredTasks = computed(() => {
   if (!statusFilter.value) {
@@ -421,42 +499,43 @@ const getTaskStatusText = (task: Task) => {
   return task.done ? '已完成' : '待处理'
 }
 
+// 连接到任务服务
+const connectToTaskService = async () => {
+  if (connecting.value) return
+
+  try {
+    connecting.value = true
+    await taskService.connect()
+    ElMessage.success('任务服务连接成功')
+
+    // 连接成功后加载任务数据
+    await loadTasks()
+  } catch (error) {
+    console.error('连接任务服务失败:', error)
+
+    // 提供更详细的错误信息
+    const errorMessage = connectionError.value || '连接任务服务失败'
+    ElMessage.error(`${errorMessage}，请检查后端服务是否运行在正确的端口上`)
+
+    // 显示连接信息帮助用户调试
+    console.warn('WebSocket连接信息:', {
+      host: 'localhost', // 可以通过settingsStore获取
+      port: 20914, // 可以通过settingsStore获取
+      endpoint: '/ws/tasks',
+      fullUrl: 'ws://localhost:20914/ws/tasks',
+    })
+  } finally {
+    connecting.value = false
+  }
+}
+
 // 加载任务列表
 const loadTasks = async () => {
   try {
-    loading.value = true
-    // TODO: 替换为实际API调用
-    // const response = await taskApi.getTasks()
-
-    // 模拟数据
-    tasks.value = [
-      {
-        id: '1',
-        details: '建立营地，建造基础庇护所和工作台',
-        done_criteria: '完成基础庇护所建造，工作台可用',
-        progress: '已建造工作台，正在收集木材',
-        done: false,
-      },
-      {
-        id: '2',
-        details: '收集基础资源：木材和石头',
-        done_criteria: '物品栏中有足够的木材和石头',
-        progress: '已完成',
-        done: true,
-      },
-      {
-        id: '3',
-        details: '挖到16个钻石并存储',
-        done_criteria: '获得16个钻石并安全存储',
-        progress: '已找到钻石矿，正在挖掘',
-        done: false,
-      },
-    ]
+    await taskService.getTasks()
   } catch (error) {
     ElMessage.error('加载任务列表失败')
     console.error(error)
-  } finally {
-    loading.value = false
   }
 }
 
@@ -492,15 +571,8 @@ const deleteTask = async (task: Task) => {
       type: 'warning',
     })
 
-    // TODO: 替换为实际API调用
-    // await taskApi.deleteTask(task.id)
-
-    // 模拟删除
-    const index = tasks.value.findIndex((t) => t.id === task.id)
-    if (index >= 0) {
-      tasks.value.splice(index, 1)
-      ElMessage.success('任务删除成功')
-    }
+    await taskService.deleteTask(task.id)
+    ElMessage.success('任务删除成功')
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除任务失败')
@@ -518,11 +590,16 @@ const clearAllTasks = async () => {
       type: 'warning',
     })
 
-    // TODO: 替换为实际API调用
-    // await taskApi.clearAllTasks()
+    // 接口文档中没有批量删除API，通过逐个删除实现
+    const currentTasks = [...tasks.value]
+    for (const task of currentTasks) {
+      try {
+        await taskService.deleteTask(task.id)
+      } catch (error) {
+        console.error(`删除任务 ${task.id} 失败:`, error)
+      }
+    }
 
-    // 模拟清空
-    tasks.value = []
     ElMessage.success('所有任务已清空')
   } catch (error) {
     if (error !== 'cancel') {
@@ -538,24 +615,30 @@ const saveTask = async () => {
     saving.value = true
 
     if (editingTask.value) {
-      // 更新任务
-      // TODO: 替换为实际API调用
-      // await taskApi.updateTask(editingTask.value.id, taskForm)
+      // 更新任务 - 通过更新进度来实现任务更新
+      if (taskForm.progress) {
+        await taskService.updateTaskProgress(editingTask.value.id, taskForm.progress)
+        ElMessage.success('任务进度更新成功')
+      }
 
-      // 模拟更新
-      Object.assign(editingTask.value, taskForm)
-      ElMessage.success('任务更新成功')
+      // 如果状态改变，需要标记完成或取消完成
+      if (taskForm.done !== editingTask.value.done) {
+        if (taskForm.done) {
+          await taskService.markTaskDone(editingTask.value.id)
+          ElMessage.success('任务标记完成成功')
+        } else {
+          // 接口中没有取消完成的功能，这里暂时不支持
+          ElMessage.warning('当前不支持取消任务完成状态')
+          return
+        }
+      }
     } else {
       // 创建任务
-      // TODO: 替换为实际API调用
-      // const newTask = await taskApi.createTask(taskForm)
-
-      // 模拟创建
-      const newTask: Task = {
-        id: Date.now().toString(),
-        ...taskForm,
-      }
-      tasks.value.push(newTask)
+      await taskService.addTask(
+        taskForm.details,
+        taskForm.done_criteria,
+        taskForm.progress || undefined,
+      )
       ElMessage.success('任务创建成功')
     }
 
@@ -585,12 +668,15 @@ const toggleTaskStatus = async (task: Task) => {
   try {
     updatingTask.value = task.id
 
-    // TODO: 替换为实际API调用
-    // await taskApi.updateTaskStatus(task.id, !task.done)
-
-    // 模拟更新
-    task.done = !task.done
-    ElMessage.success(`任务已${task.done ? '完成' : '标记为待处理'}`)
+    if (!task.done) {
+      // 标记为完成
+      await taskService.markTaskDone(task.id)
+      ElMessage.success('任务已标记为完成')
+    } else {
+      // 接口中不支持取消完成，这里提示用户
+      ElMessage.warning('当前不支持取消任务完成状态')
+      return
+    }
   } catch (error) {
     ElMessage.error('更新任务状态失败')
     console.error(error)
@@ -608,24 +694,23 @@ const executeBatchOperation = async () => {
 
     if (batchForm.operation === 'complete') {
       // 批量完成
-      // TODO: 替换为实际API调用
-      // await taskApi.batchCompleteTasks(batchForm.selectedTasks)
-
-      // 模拟批量完成
-      batchForm.selectedTasks.forEach((taskId) => {
-        const task = tasks.value.find((t) => t.id === taskId)
-        if (task) {
-          task.done = true
+      for (const taskId of batchForm.selectedTasks) {
+        try {
+          await taskService.markTaskDone(taskId)
+        } catch (error) {
+          console.error(`完成任务 ${taskId} 失败:`, error)
         }
-      })
+      }
       ElMessage.success(`已完成 ${batchForm.selectedTasks.length} 个任务`)
     } else if (batchForm.operation === 'delete') {
       // 批量删除
-      // TODO: 替换为实际API调用
-      // await taskApi.batchDeleteTasks(batchForm.selectedTasks)
-
-      // 模拟批量删除
-      tasks.value = tasks.value.filter((t) => !batchForm.selectedTasks.includes(t.id))
+      for (const taskId of batchForm.selectedTasks) {
+        try {
+          await taskService.deleteTask(taskId)
+        } catch (error) {
+          console.error(`删除任务 ${taskId} 失败:`, error)
+        }
+      }
       ElMessage.success(`已删除 ${batchForm.selectedTasks.length} 个任务`)
     }
 
@@ -639,9 +724,28 @@ const executeBatchOperation = async () => {
   }
 }
 
-// 组件挂载时加载数据
-onMounted(() => {
-  loadTasks()
+// 组件挂载时尝试连接WebSocket（静默失败）
+onMounted(async () => {
+  try {
+    // 尝试连接WebSocket，如果失败则让用户手动连接
+    await taskService.connect()
+
+    // 连接成功后加载任务数据
+    await loadTasks()
+  } catch (error) {
+    // 静默失败，让用户看到未连接状态并手动连接
+    console.warn('自动连接任务服务失败，用户可以手动连接:', error)
+  }
+})
+
+// 显示连接帮助
+const showConnectionHelp = () => {
+  showHelpDialog.value = true
+}
+
+// 组件卸载前断开连接
+onBeforeUnmount(() => {
+  taskService.disconnect()
 })
 </script>
 
@@ -655,13 +759,30 @@ onMounted(() => {
 .page-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 24px;
+}
+
+.header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .page-header h2 {
   margin: 0;
   color: #333;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connection-error {
+  color: #f56c6c;
+  font-size: 12px;
 }
 
 .header-actions {
@@ -671,6 +792,10 @@ onMounted(() => {
 
 .stats-section {
   margin-bottom: 24px;
+}
+
+.goal-section {
+  margin-bottom: 16px;
 }
 
 .stat-card {
@@ -826,6 +951,72 @@ onMounted(() => {
 .batch-form {
   max-height: 400px;
   overflow-y: auto;
+}
+
+.connection-help {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.help-content {
+  line-height: 1.6;
+}
+
+.help-content h4 {
+  margin-top: 24px;
+  margin-bottom: 12px;
+  color: #303133;
+  font-weight: 600;
+}
+
+.help-content ul,
+.help-content ol {
+  margin: 8px 0 16px 20px;
+}
+
+.help-content li {
+  margin-bottom: 4px;
+}
+
+.help-content code {
+  background-color: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+}
+
+.connection-info {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 16px;
+}
+
+.connection-info p {
+  margin: 8px 0;
+}
+
+.text-success {
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.text-danger {
+  color: #f56c6c;
+  font-weight: 500;
+}
+
+.help-content pre {
+  background-color: #f6f8fa;
+  border: 1px solid #d1d9e0;
+  border-radius: 6px;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+  line-height: 1.45;
 }
 
 /* 响应式设计 */
