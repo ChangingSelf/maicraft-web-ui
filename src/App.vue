@@ -3,22 +3,19 @@ import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 import Sidebar from './components/Sidebar.vue'
 
-// 动态决定要缓存的组件
-const cachedComponents = computed(() => {
-  // 需要保持状态的组件（WebSocket连接、复杂表单等）
-  const componentsToCache = [
-    'LogViewer', // Minecraft日志查看器页面 - 需要保持WebSocket连接
-    'MCPServerLogViewer', // MCP Server日志查看器页面 - 需要保持WebSocket连接
-    'LogViewer', // 可复用的日志查看器组件 - 核心组件需要缓存
-    'EventViewer', // 事件查看器 - 实时事件数据
-    'Monitoring', // 系统监控 - 监控数据状态
-    'MCPTools', // MCP工具管理 - 工具状态和配置
+// 不需要缓存的组件（黑名单机制）
+const excludedComponents = computed(() => {
+  // 不需要保持状态的组件（静态页面、简单表单等）
+  const componentsToExclude = [
+    'Home', // 主页 - 通常是静态的欢迎页面
+    'Settings', // 设置页面 - 如果不需要保持表单状态
+    'Changelog', // 版本信息页面 - 通常是静态内容
   ]
 
   // 可以在这里添加动态条件
-  // 例如：根据用户权限、路由参数等决定是否缓存某些组件
+  // 例如：根据路由参数、用户偏好等决定是否排除某些组件
 
-  return componentsToCache
+  return componentsToExclude
 })
 
 // 获取当前路由组件名（用于调试或条件判断）
@@ -29,7 +26,7 @@ const currentRouteName = computed(() => {
 
 // 调试keep-alive是否工作
 const handleRouteChange = () => {
-  console.log('路由切换，缓存组件列表:', cachedComponents.value)
+  console.log('路由切换，不缓存组件列表:', excludedComponents.value)
 }
 </script>
 
@@ -38,7 +35,7 @@ const handleRouteChange = () => {
     <Sidebar />
     <el-main class="main-content">
       <RouterView v-slot="{ Component }">
-        <keep-alive :include="cachedComponents">
+        <keep-alive :exclude="excludedComponents">
           <component :is="Component" />
         </keep-alive>
       </RouterView>
