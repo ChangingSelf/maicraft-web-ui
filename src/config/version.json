@@ -1,17 +1,29 @@
 {
-  "current": "0.15.19",
+  "current": "0.16.0",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
   "buildDate": "2025-09-20",
-  "buildTime": "11:41:24",
+  "buildTime": "12:22:40",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
     "lastUpdated": "2025-09-20",
-    "totalVersions": 25,
+    "totalVersions": 26,
     "versions": [
+      {
+        "version": "0.16.0",
+        "date": "2025-09-20",
+        "type": "minor",
+        "changes": {
+          "feat": [
+            "token监控页面",
+            "修改组件缓存逻辑为黑名单"
+          ]
+        },
+        "summary": "✨ 新功能 - token监控页面; ✨ 新功能 - 修改组件缓存逻辑为黑名单"
+      },
       {
         "version": "0.15.19",
         "date": "2025-09-20",
