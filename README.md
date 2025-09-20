@@ -1,328 +1,175 @@
 # Maicraft Web UI
 
-基于 Vue3 + TypeScript + Element Plus 的 Maicraft Web 界面
+Minecraft 服务器监控和管理界面
 
 ## 🎯 项目简介
 
 Maicraft Web UI 是 [Maicraft](https://github.com/MaiM-with-u/Maicraft) 项目的专用 Web 管理界面。
 
-**Maicraft** 是一个基于大语言模型的智能 Minecraft 代理系统，它结合了：
-
-- **大语言模型 (LLM)** - 提供智能决策和任务规划
-- **基于 Mineflayer 的 MC 操控** - 通过 maicraft-mcp 操作 Minecraft 游戏
-- **Agent 系统** - 采用 ReAct 逻辑的智能代理
-
-该系统能够理解游戏环境，制定策略，执行复杂的 MC 游戏任务，如挖矿、制作、建造等，并能与玩家进行流畅的交流，根据玩家的反馈进行行为调整。
-
-## 🚀 功能特性
-
-### 当前实现的功能
-
-- **实时日志查看器**：通过 WebSocket 连接实时查看系统日志
-- **玩家状态监控**：显示在线玩家信息和状态
-- **世界信息监控**：显示 Minecraft 世界的基本信息
-- **智能筛选**：支持按日志级别和模块进行筛选
-- **自动重连**：WebSocket 断开时自动重连机制
-- **心跳保活**：定期发送心跳包保持连接稳定
-- **现代化UI**：基于 Element Plus 的美观界面设计
-
-### 待实现功能
-
-- 服务器管理界面
-- 玩家管理功能
-- 任务监控面板
-- 设置配置界面
-- 更多监控指标
-
-## 📋 系统要求
-
-### Web UI 环境要求
-
-- Node.js >= 20.19.0 || >= 22.12.0
-- pnpm >= 10.7.0
-
-## 🛠️ 安装和运行
+## 🚀 快速开始
 
 ### 安装依赖
 
-```sh
+```bash
 pnpm install
 ```
 
-### 开发环境运行
+### 启动开发服务器
 
-#### 方式1：仅前端（需要单独启动后端服务）
-
-```sh
-pnpm dev
+```bash
+npm run dev
 ```
 
-#### 方式2：完整开发环境（前端 + Mock WebSocket服务器）
+### 构建生产版本
 
-```sh
-pnpm dev:full
+```bash
+npm run build
 ```
 
-#### 方式3：仅Mock WebSocket服务器
+## 📋 版本管理
 
-```sh
-pnpm mock-ws
+### 查看版本信息
+
+```bash
+npm run version:info
 ```
 
-#### 方式4：一键演示（推荐）
+### 智能版本发布
 
-```sh
-pnpm demo
+```bash
+# 快速发布（推荐）
+npm run version:feat    # 新功能
+npm run version:fix     # 修复bug
+
+# 自定义发布
+npm run version:patch -m "feat: 添加用户管理功能"
+npm run version:minor -m "feat: 完全重写界面"
+npm run version:major -m "feat: 架构升级"
 ```
 
-这将自动启动完整的演示环境，包括Mock服务器和前端应用。
+### 备份管理
 
-访问 `http://localhost:5173` 查看应用
+```bash
+# 查看所有备份
+npm run backup:list
 
-### 生产环境构建
+# 从最新备份恢复
+npm run backup:latest
 
-```sh
-pnpm build
+# 安全演示
+npm run version:demo
 ```
 
-### 代码检查
+### 🎯 新特性
 
-```sh
-pnpm lint
-```
+- ✅ **提交类型支持**: feat, fix, docs, style, refactor, perf, test, chore, ci, build
+- ✅ **智能分析**: 版本趋势、变更统计、类型分布
+- ✅ **自动备份**: 每次更新自动备份，gitignore友好
+- ✅ **数据兼容**: 支持新旧版本格式无缝迁移
 
-## 🔧 Mock WebSocket服务器
+## 🛡️ 安全保障
 
-项目包含一个内置的Mock WebSocket服务器，用于在没有真实后端的情况下测试WebSocket连接功能。
+### 自动备份
 
-### 启动Mock服务器
+- ✅ 每次更新前自动创建备份
+- ✅ 备份存储在 `backups/` 目录
+- ✅ 支持时间戳和最新备份
+- ✅ 备份文件自动被 `.gitignore` 忽略
 
-```sh
-# 单独启动Mock服务器
-pnpm mock-ws
+### 数据安全
 
-# 或者与前端一起启动
-pnpm dev:full
-```
-
-### Mock服务器特性
-
-- **自动日志生成**：每2秒自动推送模拟日志消息
-- **多种日志级别**：TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL
-- **多模块支持**：MCPClient, MaiAgent, System, TaskManager, EventHandler
-- **心跳机制**：30秒间隔的ping/pong心跳检测
-- **订阅支持**：处理客户端的订阅消息
-- **实时响应**：支持所有WebSocket消息格式
-
-### 测试步骤
-
-1. **启动Mock服务器**：
-
-   ```sh
-   pnpm mock-ws
-   ```
-
-   应该看到：
-
-   ```
-   🚀 Mock WebSocket服务器启动在 ws://localhost:20914
-   📡 日志WebSocket端点: ws://localhost:20914/ws/logs
-   ```
-
-2. **启动前端应用**：
-
-   ```sh
-   pnpm dev
-   ```
-
-   访问 `http://localhost:5173`
-
-3. **测试连接**：
-   - 点击"连接服务器"按钮建立WebSocket连接
-   - 观察实时日志推送（每2秒一条）
-   - 尝试不同的日志级别和模块筛选
-   - 测试断开/重连功能
-
-4. **验证功能**：
-   - 心跳机制（30秒间隔）
-   - 订阅消息处理
-   - 自动重连（断开后5秒重连）
-   - 日志数量限制（默认1000条）
-
-### 完整开发环境
-
-使用 `pnpm dev:full` 同时启动前端和Mock服务器：
-
-```sh
-pnpm dev:full
-```
-
-这将同时启动：
-
-- Mock WebSocket服务器 (ws://localhost:20914)
-- Vue前端开发服务器 (http://localhost:5173)
-
-## 📖 日志查看器使用说明
-
-### 功能概述
-
-日志查看器通过 WebSocket 连接到 Maicraft Agent 的日志服务，实时显示智能 Minecraft 代理系统的运行日志信息，包括 Agent 的决策过程、任务执行状态、环境感知信息等。
-
-### 主要功能
-
-1. **实时日志显示**
-   - 自动连接到 `ws://localhost:20914/ws/logs`
-   - 实时接收和显示日志消息
-   - 支持自动滚动到最新日志
-
-2. **日志筛选**
-   - **日志级别**：TRACE, DEBUG, INFO, SUCCESS, WARNING, ERROR, CRITICAL
-   - **模块筛选**：MCPClient, MaiAgent, System, TaskManager, EventHandler (对应 Maicraft 的各个功能模块)
-
-3. **连接管理**
-   - 连接状态实时显示
-   - 手动连接/断开控制
-   - 自动重连机制（断开5秒后自动重连）
-   - 心跳保活（30秒间隔）
-
-4. **日志管理**
-   - 清空日志功能
-   - 最大显示条数限制（默认1000条）
-   - 日志格式化显示
-
-### 日志消息格式
-
-```json
-{
-  "type": "log",
-  "timestamp": 1704067200000,
-  "level": "INFO",
-  "module": "MCPClient",
-  "message": "MCP 客户端已连接"
-}
-```
-
-### 订阅消息格式
-
-```json
-{
-  "type": "subscribe",
-  "levels": ["INFO", "WARNING", "ERROR"],
-  "modules": ["MCPClient", "MaiAgent"]
-}
-```
-
-## 🔧 技术栈
-
-- **前端框架**：Vue 3 + TypeScript
-- **UI组件库**：Element Plus
-- **状态管理**：Pinia
-- **路由**：Vue Router 4
-- **构建工具**：Vite
-- **通信**：WebSocket (原生)
+- ✅ **不丢失原有内容**：只插入，不覆盖
+- ✅ **智能去重**：避免重复版本条目
+- ✅ **格式验证**：确保CHANGELOG格式正确
+- ✅ **错误恢复**：失败时自动回滚
 
 ## 📁 项目结构
 
 ```
-src/
-├── views/
-│   ├── LogViewer.vue      # 日志查看器页面 ✅ 已实现
-│   ├── PlayerStatus.vue   # 玩家状态监控页面 ✅ 已实现
-│   ├── WorldInfo.vue      # 世界信息监控页面 ✅ 已实现
-│   ├── Home.vue           # 首页
-│   ├── Monitoring.vue     # 监控面板
-│   ├── ServerManager.vue  # 服务器管理
-│   ├── PlayerManager.vue  # 玩家管理
-│   ├── Settings.vue       # 设置页面
-│   ├── EventViewer.vue    # 事件查看器
-│   └── MCPTools.vue       # MCP工具
-├── components/            # 公共组件
-│   ├── Sidebar.vue        # 侧边栏导航
-│   ├── WebSocketManager.vue # WebSocket管理器
-│   ├── FilterPanel.vue    # 筛选面板
-│   └── SettingsDialog.vue # 设置对话框
-├── router/
-│   └── index.ts           # 路由配置
-├── stores/                # Pinia 状态管理
-├── services/              # 服务层
-│   ├── gameWebSocket.ts   # WebSocket服务
-│   └── mcp.ts            # MCP服务
-├── App.vue                # 根组件
-└── main.ts                # 应用入口
+maicraft-web-ui/
+├── src/
+│   ├── config/
+│   │   └── version.json          # 版本配置
+│   ├── services/
+│   │   └── versionService.ts     # 版本管理服务
+│   ├── views/
+│   │   └── Changelog.vue         # 版本信息页面
+│   └── components/               # UI组件
+├── scripts/
+│   └── version-manager.js        # 版本管理脚本
+├── backups/                      # 备份文件目录
+│   ├── CHANGELOG.md.latest.bak   # 最新备份
+│   └── CHANGELOG.md.时间戳.bak   # 历史备份
+├── CHANGELOG.md                  # 更新日志
+├── package.json                  # 项目配置
+└── README.md                     # 项目文档
 ```
 
-**说明**: ✅ 标记的页面为当前已实现功能
+## 🎯 功能特性
 
-## ⚙️ 配置说明
+### 前端功能
 
-### WebSocket 配置
+- 🔍 **实时日志查看**：支持多种日志级别过滤
+- 📊 **服务器监控**：实时显示服务器状态
+- 🎮 **玩家管理**：查看在线玩家信息
+- 🛠️ **MCP集成**：支持Minecraft Control Protocol
+- 📱 **响应式设计**：适配桌面和移动设备
 
-在日志查看器页面可以修改以下设置：
+### 版本管理
 
-- **WebSocket地址**：默认 `ws://localhost:20914/ws/logs`
-- **自动滚动**：新日志到达时自动滚动到底部
-- **最大显示条数**：限制显示的日志条数，默认1000条
+- 📦 **自动化发布**：一键版本更新
+- 🔄 **多源同步**：自动同步所有配置文件
+- 🛡️ **安全备份**：自动备份重要文件
+- 📝 **格式化日志**：支持Markdown渲染
 
-### 环境变量
+## 🔧 技术栈
 
-```env
-# 开发环境
-VITE_WS_URL=ws://localhost:20914/ws/logs
+- **前端框架**: Vue 3 + TypeScript
+- **UI组件库**: Element Plus
+- **构建工具**: Vite
+- **包管理器**: pnpm
+- **代码质量**: ESLint + Prettier
 
-# 生产环境
-VITE_WS_URL=ws://your-server:20914/ws/logs
-```
+## 📖 详细文档
 
-## 🐛 故障排除
+- [版本管理系统完整指南](doc/VERSION_MANAGEMENT_GUIDE.md)
+- [API文档](api.md)
+- [快速开始](QUICKSTART.md)
 
-### WebSocket 连接失败
+## 🤝 贡献指南
 
-1. 检查后端 WebSocket 服务是否运行
-2. 检查 WebSocket 地址是否正确（默认 `ws://localhost:20914/ws/logs`）
-3. 检查防火墙设置
-4. 查看浏览器控制台错误信息
+1. Fork 本项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 创建 Pull Request
 
-### 日志不显示
+### 开发规范
 
-1. 确认已选择正确的日志级别和模块
-2. 检查后端服务是否正在发送日志数据
-3. 尝试刷新页面重新连接
-4. 检查Mock服务器是否在运行：`pnpm mock-ws`
-
-### Mock服务器问题
-
-1. **端口被占用**：
-
-   ```sh
-   # 检查端口20914是否被占用
-   netstat -ano | findstr :20914
-   # 如果被占用，杀死进程或使用其他端口
-   ```
-
-2. **ES模块导入错误**：
-   - 确保使用Node.js 14+
-   - 检查package.json中的"type": "module"
-
-3. **连接失败**：
-   - 确认前端WebSocket地址正确（默认ws://localhost:20914/ws/logs）
-   - 检查防火墙设置
+- 使用 TypeScript 进行开发
+- 遵循 Vue 3 Composition API 最佳实践
+- 提交前运行代码质量检查：
+  ```bash
+  npm run lint
+  npm run type-check
+  ```
 
 ## 📄 许可证
 
-MIT License
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
+
+## 🙋‍♂️ 问题反馈
+
+如果您在使用过程中遇到问题，请：
+
+1. 查看 [问题排查指南](doc/TROUBLESHOOTING.md)
+2. 在 GitHub Issues 中提交问题
+3. 联系开发团队
+
+## 🎉 更新日志
+
+详细的更新历史请查看 [CHANGELOG.md](CHANGELOG.md)
 
 ---
 
-## 开发环境设置
-
-### 推荐的 IDE 设置
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (禁用 Vetur)
-
-### TypeScript 支持
-
-项目使用 `vue-tsc` 进行类型检查，确保 `.vue` 文件的类型支持。
-
-### 自定义配置
-
-查看 [Vite 配置参考](https://vite.dev/config/)。
+**Maicraft Web UI** - 让 Minecraft 服务器管理变得简单而强大！ 🚀

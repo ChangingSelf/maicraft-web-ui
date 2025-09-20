@@ -1,0 +1,142 @@
+{
+  "current": "1.1.4",
+  "name": "Maicraft Web UI",
+  "description": "Minecraft 服务器监控和管理界面",
+  "buildDate": "2025-09-20",
+  "buildTime": "09:12:00",
+  "buildInfo": "Vue 3 + TypeScript + Vite",
+  "author": "Maicraft Team",
+  "repository": "https://github.com/your-repo/maicraft-web-ui",
+  "license": "MIT",
+  "changelog": {
+    "lastUpdated": "2025-09-20",
+    "totalVersions": 6,
+    "versions": [
+      {
+        "version": "1.1.4",
+        "date": "2025-09-20",
+        "type": "patch",
+        "changelog": ["feat: 新功能"]
+      },
+      {
+        "version": "1.1.3",
+        "date": "2025-09-20",
+        "type": "patch",
+        "semverType": "patch",
+        "changes": {
+          "fix": ["测试新的备份系统"]
+        },
+        "summary": "修复备份系统相关问题"
+      },
+      {
+        "version": "1.1.2",
+        "date": "2025-09-20",
+        "type": "patch",
+        "semverType": "patch",
+        "changes": {
+          "feat": ["测试安全的CHANGELOG更新"]
+        },
+        "summary": "增强CHANGELOG更新安全性"
+      },
+      {
+        "version": "1.1.1",
+        "date": "2025-09-20",
+        "type": "patch",
+        "semverType": "patch",
+        "changes": {
+          "feat": ["演示版本更新"]
+        },
+        "summary": "版本管理功能演示"
+      },
+      {
+        "version": "1.1.0",
+        "date": "2025-01-19",
+        "type": "minor",
+        "semverType": "minor",
+        "changes": {
+          "feat": [
+            "✨ 添加版本信息和更新日志页面",
+            "✨ 支持实时显示服务器状态",
+            "✨ 优化 MCP 工具管理界面",
+            "✨ 新增玩家状态监控功能"
+          ],
+          "refactor": ["🔧 优化侧边栏导航体验", "🔧 改进日志查看器的性能", "🔧 更新用户界面设计"],
+          "fix": [
+            "🐛 修复 WebSocket 连接稳定性问题",
+            "🐛 修复日志过滤器显示异常",
+            "🐛 修复事件查看器数据更新延迟"
+          ]
+        },
+        "summary": "重大功能更新，包含新功能和性能优化"
+      },
+      {
+        "version": "1.0.0",
+        "date": "2024-12-01",
+        "type": "major",
+        "semverType": "major",
+        "changes": {
+          "feat": [
+            "✨ 初始版本发布",
+            "✨ 支持 Minecraft 服务器日志实时查看",
+            "✨ 集成 MCP (Minecraft Control Protocol) 服务器",
+            "✨ 提供基础的事件监控功能",
+            "✨ 支持多种日志级别过滤",
+            "✨ 实时服务器状态监控"
+          ],
+          "build": [
+            "🏗️ 基于 Vue 3 + TypeScript + Vite",
+            "🏗️ 使用 Element Plus UI 组件库",
+            "🏗️ 支持响应式设计",
+            "🏗️ WebSocket 实时通信",
+            "🏗️ Pinia 状态管理"
+          ]
+        },
+        "summary": "初始版本发布，完整的Minecraft服务器管理功能"
+      }
+    ]
+  },
+  "features": [
+    {
+      "name": "日志查看器",
+      "description": "实时查看 Minecraft 服务器日志",
+      "version": "1.0.0",
+      "status": "stable"
+    },
+    {
+      "name": "实时监控",
+      "description": "服务器状态和玩家活动实时监控",
+      "version": "1.0.0",
+      "status": "stable"
+    },
+    {
+      "name": "MCP 集成",
+      "description": "Minecraft Control Protocol 服务器集成",
+      "version": "1.0.0",
+      "status": "stable"
+    },
+    {
+      "name": "版本信息页面",
+      "description": "显示版本信息和更新日志",
+      "version": "1.1.0",
+      "status": "stable"
+    },
+    {
+      "name": "主题切换",
+      "description": "深色/浅色主题切换功能",
+      "version": "1.2.0",
+      "status": "planned"
+    },
+    {
+      "name": "多语言支持",
+      "description": "国际化支持",
+      "version": "1.2.0",
+      "status": "planned"
+    }
+  ],
+  "dependencies": {
+    "vue": "^3.5.18",
+    "element-plus": "^2.11.2",
+    "vite": "^7.0.6",
+    "typescript": "~5.8.0"
+  }
+}

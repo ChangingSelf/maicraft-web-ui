@@ -80,14 +80,16 @@
 
     <!-- 侧边栏底部 -->
     <div class="sidebar-footer">
+      <div class="version-info" v-if="!isCollapsed">
+        <div class="version-display" @click="handleVersionClick">
+          <small>{{ currentVersion }}</small>
+        </div>
+      </div>
       <div class="server-status" v-if="!isCollapsed">
         <div class="status-indicator">
           <div class="status-dot" :class="{ online: serverOnline }"></div>
-          <span>{{ serverOnline ? '服务器在线' : '服务器离线' }}</span>
+          <span>{{ serverOnline ? '在线' : '离线' }}</span>
         </div>
-      </div>
-      <div class="version-info" v-if="!isCollapsed">
-        <small>v1.0.0</small>
       </div>
     </div>
   </el-aside>
@@ -96,6 +98,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { getCurrentVersion, formatVersion } from '../services/versionService'
 import {
   House,
   Monitor,
@@ -119,13 +122,23 @@ const serverOnline = ref(true)
 const isMobile = ref(false)
 const showMobileSidebar = ref(false)
 
+// 版本信息
+const currentVersion = computed(() => {
+  try {
+    return formatVersion(getCurrentVersion())
+  } catch (error) {
+    console.warn('获取版本信息失败:', error)
+    return 'v1.1.4' // 兜底版本
+  }
+})
+
 // 当前激活的菜单项
 const activeIndex = computed(() => {
   const path = route.path
   if (path === '/' || path === '/home') return 'home'
   if (path === '/logs') return 'minecraft-logs'
   if (path === '/mcp-logs') return 'mcp-server-logs'
-  if (path === '/logs' || path === '/mcp-logs') return 'logs'  // 用于展开子菜单
+  if (path === '/logs' || path === '/mcp-logs') return 'logs' // 用于展开子菜单
   if (path === '/events') return 'events'
   if (path === '/mcp-tools') return 'mcp-tools'
   if (path.startsWith('/server')) return 'server'
@@ -217,6 +230,11 @@ const handleSelect = (index: string) => {
       router.push('/settings')
       break
   }
+}
+
+// 处理版本信息点击
+const handleVersionClick = () => {
+  router.push('/changelog')
 }
 
 // 监听路由变化，更新活动菜单项
@@ -334,24 +352,46 @@ watch(
   background: #fafafa;
 }
 
+.version-info {
+  margin-bottom: 12px;
+}
+
+.version-display {
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.version-display:hover {
+  background-color: #e6e6e6;
+  color: #409eff;
+}
+
+.version-display small {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 500;
+}
+
 .server-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: 12px;
   color: #666;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background-color: #ff4d4f;
   transition: background-color 0.3s ease;
@@ -359,12 +399,6 @@ watch(
 
 .status-dot.online {
   background-color: #52c41a;
-}
-
-.version-info {
-  text-align: center;
-  color: #999;
-  font-size: 12px;
 }
 
 /* 滚动条样式 */

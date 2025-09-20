@@ -7,6 +7,7 @@ import MCPTools from '../views/MCPTools.vue'
 import Settings from '../views/Settings.vue'
 import WorldInfo from '../views/WorldInfo.vue'
 import PlayerStatus from '../views/PlayerStatus.vue'
+import Changelog from '../views/Changelog.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -76,6 +77,15 @@ const router = createRouter({
       component: PlayerStatus,
       meta: {
         title: '玩家状态',
+      },
+    },
+    // 版本信息页面
+    {
+      path: '/changelog',
+      name: 'changelog',
+      component: Changelog,
+      meta: {
+        title: '版本信息',
       },
     },
   ],

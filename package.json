@@ -1,6 +1,6 @@
 {
   "name": "maicraft-web-ui",
-  "version": "0.0.0",
+  "version": "1.1.4",
   "private": true,
   "type": "module",
   "engines": {
@@ -16,12 +16,26 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "version:patch": "node scripts/version-manager.js patch",
+    "version:minor": "node scripts/version-manager.js minor",
+    "version:major": "node scripts/version-manager.js major",
+    "version:info": "node scripts/version-manager.js info",
+    "version:demo": "node scripts/version-manager.js patch -m \"演示版本更新\" --skip-git",
+    "version:feat": "node scripts/version-manager.js patch -m \"feat: 新功能\" --skip-git",
+    "version:fix": "node scripts/version-manager.js patch -m \"fix: 修复bug\" --skip-git",
+    "backup:list": "node scripts/restore-backup.js list",
+    "backup:latest": "node scripts/restore-backup.js latest"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
+    "@types/markdown-it": "^14.1.2",
     "@types/ws": "^8.18.1",
     "element-plus": "^2.11.2",
+    "highlight.js": "^11.11.1",
+    "markdown-it": "^14.1.0",
+    "markdown-it-anchor": "^9.2.0",
+    "markdown-it-highlightjs": "^4.2.0",
     "pinia": "^3.0.3",
     "vue": "^3.5.18",
     "vue-router": "^4.5.1",

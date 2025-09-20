@@ -28,3 +28,8 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+# 版本管理备份文件
+backups/
+CHANGELOG.md.backup.*
+*.bak
