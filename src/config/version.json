@@ -1,17 +1,32 @@
 {
-  "current": "0.16.2",
+  "current": "0.17.0",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
   "buildDate": "2025-09-20",
-  "buildTime": "20:26:45",
+  "buildTime": "23:29:51",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
     "lastUpdated": "2025-09-20",
-    "totalVersions": 28,
+    "totalVersions": 29,
     "versions": [
+      {
+        "version": "0.17.0",
+        "date": "2025-09-20",
+        "type": "minor",
+        "changes": {
+          "feat": [
+            "新增设置管理，调整设置页面",
+            "适配任务管理api"
+          ],
+          "fix": [
+            "调整左下角版本号显示"
+          ]
+        },
+        "summary": "✨ 新功能 - 新增设置管理，调整设置页面; 🐛 修复 - 调整左下角版本号显示; ✨ 新功能 - 适配任务管理api"
+      },
       {
         "version": "0.16.2",
         "date": "2025-09-20",
