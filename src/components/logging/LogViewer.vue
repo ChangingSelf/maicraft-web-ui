@@ -385,9 +385,11 @@ const connect = () => {
   try {
     // 创建WebSocket管理器
     wsManager = createWebSocketManager(settings.value.wsUrl, {
-      heartbeatInterval: 30000,
+      heartbeatInterval: 10000, // 10秒 - 更短的心跳间隔
       reconnectInterval: 5000,
       maxReconnectAttempts: 5,
+      enableHeartbeat: true,
+      autoReconnect: true,
     })
 
     // 添加消息处理器

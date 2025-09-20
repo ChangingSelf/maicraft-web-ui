@@ -40,27 +40,28 @@ export interface WSConfig {
   maxReconnectAttempts?: number
   autoReconnect?: boolean
   enableHeartbeat?: boolean
+  onPing?: (pingMessage: any) => void // ping发送回调
 }
 
 // WebSocket管理器配置映射
 export const WS_MANAGER_CONFIGS: Record<WSEndpointType, Partial<WSConfig>> = {
   // 游戏相关端点配置
-  PLAYER: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
-  WORLD: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
-  MARKER: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  PLAYER: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  WORLD: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  MARKER: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
 
   // 日志和监控端点配置
-  LOGS: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
-  LOGS_ALT: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  LOGS: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  LOGS_ALT: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
 
   // 监控和统计端点配置
-  TOKEN_USAGE: { heartbeatInterval: 30000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
-  EVENTS: { heartbeatInterval: 30000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
-  TASK_MANAGER: { heartbeatInterval: 30000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
+  TOKEN_USAGE: { heartbeatInterval: 10000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
+  EVENTS: { heartbeatInterval: 10000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
+  TASK_MANAGER: { heartbeatInterval: 10000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
 
   // 通用端点配置
-  GENERAL: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
-  STATUS: { heartbeatInterval: 30000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  GENERAL: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  STATUS: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
 }
 
 // =============================================
@@ -131,11 +132,12 @@ export class GameWebSocketManager {
     this.id = id
     this.config = {
       url: config.url,
-      heartbeatInterval: config.heartbeatInterval || 30000,
+      heartbeatInterval: config.heartbeatInterval || 10000,
       reconnectInterval: config.reconnectInterval || 5000,
       maxReconnectAttempts: config.maxReconnectAttempts || 5,
       autoReconnect: config.autoReconnect !== false,
       enableHeartbeat: config.enableHeartbeat !== false,
+      onPing: config.onPing,
     }
   }
 
@@ -158,8 +160,17 @@ export class GameWebSocketManager {
         this.connection.error = null
         this.reconnectAttempts = 0
         console.log(`[${this.id}] ${this.config.url} WebSocket connected`)
+        console.log(
+          `[${this.id}] Heartbeat enabled: ${this.config.enableHeartbeat}, interval: ${this.config.heartbeatInterval}ms`,
+        )
         if (this.config.enableHeartbeat) {
-          this.startHeartbeat()
+          console.log(`[${this.id}] Starting heartbeat in 1 second...`)
+          // 延迟1秒启动心跳，确保连接完全建立
+          setTimeout(() => {
+            this.startHeartbeat()
+          }, 1000)
+        } else {
+          console.log(`[${this.id}] Heartbeat disabled`)
         }
         this.connectionHandlers.forEach((handler) => handler(true))
       }
@@ -214,16 +225,26 @@ export class GameWebSocketManager {
 
   // 发送消息
   sendMessage(message: any) {
+    console.log(`[${this.id}] sendMessage called with:`, message)
+    console.log(`[${this.id}] WebSocket exists: ${!!this.ws}`)
+    console.log(`[${this.id}] ReadyState: ${this.ws?.readyState}`)
+    console.log(`[${this.id}] Expected OPEN state (1): ${WebSocket.OPEN}`)
+
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket未连接，无法发送消息')
+      console.warn(
+        `[${this.id}] WebSocket not ready for sending. Exists: ${!!this.ws}, State: ${this.ws?.readyState}`,
+      )
       return false
     }
 
     try {
-      this.ws.send(JSON.stringify(message))
+      const messageString = JSON.stringify(message)
+      console.log(`[${this.id}] Sending message string: ${messageString}`)
+      this.ws.send(messageString)
+      console.log(`[${this.id}] Message sent successfully`)
       return true
     } catch (error) {
-      console.error('发送WebSocket消息失败:', error)
+      console.error(`[${this.id}] Failed to send WebSocket message:`, error)
       return false
     }
   }
@@ -297,21 +318,63 @@ export class GameWebSocketManager {
 
   // 开始心跳
   private startHeartbeat() {
+    console.log(`[${this.id}] === STARTING HEARTBEAT ===`)
+    console.log(`[${this.id}] Heartbeat interval: ${this.config.heartbeatInterval}ms`)
+    console.log(`[${this.id}] WebSocket readyState: ${this.ws?.readyState}`)
+    console.log(`[${this.id}] WebSocket URL: ${this.config.url}`)
+
+    // 清除可能存在的旧定时器
+    if (this.heartbeatTimer) {
+      console.log(`[${this.id}] Clearing existing heartbeat timer`)
+      clearInterval(this.heartbeatTimer)
+      this.heartbeatTimer = null
+    }
+
     this.heartbeatTimer = window.setInterval(() => {
+      console.log(`[${this.id}] === HEARTBEAT TICK ===`)
+      console.log(`[${this.id}] Current readyState: ${this.ws?.readyState}`)
+      console.log(`[${this.id}] Connection status: ${this.connection.isConnected}`)
+
       if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-        this.sendMessage({
+        const pingMessage = {
           type: 'ping',
           timestamp: Date.now(),
-        })
+        }
+        console.log(`[${this.id}] Preparing to send ping:`, pingMessage)
+
+        const result = this.sendMessage(pingMessage)
+        console.log(`[${this.id}] Ping send result: ${result}`)
+
+        if (!result) {
+          console.error(`[${this.id}] Failed to send ping message!`)
+        }
+
+        // 调用ping回调（如果存在）
+        if (this.config.onPing) {
+          try {
+            this.config.onPing(pingMessage)
+          } catch (error) {
+            console.error(`[${this.id}] Error in ping callback:`, error)
+          }
+        }
+      } else {
+        console.warn(
+          `[${this.id}] WebSocket not ready for ping, readyState: ${this.ws?.readyState}`,
+        )
       }
     }, this.config.heartbeatInterval)
+
+    console.log(`[${this.id}] Heartbeat timer created with ID: ${this.heartbeatTimer}`)
   }
 
   // 停止心跳
   private stopHeartbeat() {
     if (this.heartbeatTimer) {
+      console.log(`[${this.id}] Stopping heartbeat timer`)
       clearInterval(this.heartbeatTimer)
       this.heartbeatTimer = null
+    } else {
+      console.log(`[${this.id}] No heartbeat timer to stop`)
     }
   }
 
@@ -344,15 +407,17 @@ export const createWebSocketManager = (
     maxReconnectAttempts?: number
     autoReconnect?: boolean
     enableHeartbeat?: boolean
+    onPing?: (pingMessage: any) => void
   } = {},
 ) => {
   const config: WSConfig = {
     url,
-    heartbeatInterval: options.heartbeatInterval || 30000,
+    heartbeatInterval: options.heartbeatInterval || 10000,
     reconnectInterval: options.reconnectInterval || 5000,
     maxReconnectAttempts: options.maxReconnectAttempts || 5,
-    autoReconnect: options.autoReconnect,
-    enableHeartbeat: options.enableHeartbeat,
+    autoReconnect: options.autoReconnect !== false,
+    enableHeartbeat: options.enableHeartbeat !== false,
+    onPing: options.onPing,
   }
 
   return new GameWebSocketManager(`custom-${url}`, config)
@@ -361,7 +426,7 @@ export const createWebSocketManager = (
 // 日志WebSocket专用管理器
 export const createLogsWebSocketManager = (url: string = WS_ENDPOINTS.LOGS) => {
   return createWebSocketManager(url, {
-    heartbeatInterval: 30000,
+    heartbeatInterval: 10000, // 10秒 - 匹配服务器清理间隔
     reconnectInterval: 5000,
     maxReconnectAttempts: 5,
   })
@@ -370,7 +435,7 @@ export const createLogsWebSocketManager = (url: string = WS_ENDPOINTS.LOGS) => {
 // 通用事件WebSocket管理器
 export const createEventWebSocketManager = (url: string) => {
   return createWebSocketManager(url, {
-    heartbeatInterval: 30000,
+    heartbeatInterval: 10000, // 10秒 - 匹配服务器清理间隔
     reconnectInterval: 3000,
     maxReconnectAttempts: 3,
   })

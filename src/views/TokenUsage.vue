@@ -302,9 +302,11 @@ const connectWebSocket = () => {
   try {
     const wsUrl = `ws://localhost:20914/ws/token-usage`
     wsManager.value = createWebSocketManager(wsUrl, {
-      heartbeatInterval: 30000,
+      heartbeatInterval: 10000, // 10秒 - 匹配服务器清理间隔
       reconnectInterval: 3000,
       maxReconnectAttempts: 3,
+      enableHeartbeat: true,
+      autoReconnect: true,
     })
 
     // 添加消息处理器
@@ -395,17 +397,49 @@ const getCurrentUsage = () => {
 
 // 处理WebSocket消息
 const handleWebSocketMessage = (data: any) => {
+  // 处理心跳响应
+  if (data.type === 'pong') {
+    console.log('Token监控：收到pong响应，连接活跃')
+    return
+  }
+
+  // 处理服务端ping（双向心跳）
+  if (data.type === 'ping') {
+    console.log('Token监控：收到服务端ping，自动回复pong')
+    return
+  }
+
+  // 处理业务消息
   if (data.type === 'token_usage_update') {
     updateUsageData(data.data)
   } else if (data.type === 'error') {
     ElMessage.error(`监控错误: ${data.message}`)
+  } else if (data.type === 'welcome') {
+    console.log('Token监控：连接已建立')
+  } else if (data.type === 'subscribed') {
+    console.log('Token监控：已订阅数据更新')
   }
 }
 
 // 更新使用量数据
 const updateUsageData = (data: any) => {
-  if (data.model_name && data.usage) {
-    // 更新单个模型数据
+  // 处理批量模型数据格式
+  if (data.models) {
+    // 清空现有数据
+    modelUsages.value = []
+
+    // 添加新的模型数据
+    Object.values(data.models).forEach((modelData: any) => {
+      if (modelData && typeof modelData === 'object') {
+        modelUsages.value.push({
+          model_name: modelData.model_name,
+          usage: modelData,
+        })
+      }
+    })
+  }
+  // 处理单个模型数据格式（兼容旧格式）
+  else if (data.model_name && data.usage) {
     const existingIndex = modelUsages.value.findIndex((m) => m.model_name === data.model_name)
     if (existingIndex >= 0) {
       modelUsages.value[existingIndex] = data

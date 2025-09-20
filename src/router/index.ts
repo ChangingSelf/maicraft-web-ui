@@ -10,6 +10,8 @@ import PlayerStatus from '../views/PlayerStatus.vue'
 import Changelog from '../views/Changelog.vue'
 import TokenUsage from '../views/TokenUsage.vue'
 import TaskManager from '../views/TaskManager.vue'
+import WebSocketDebugger from '../views/WebSocketDebugger.vue'
+import HeartbeatTest from '../views/HeartbeatTest.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -106,6 +108,24 @@ const router = createRouter({
       component: Changelog,
       meta: {
         title: '版本信息',
+      },
+    },
+    // WebSocket 调试工具
+    {
+      path: '/websocket-debugger',
+      name: 'websocket-debugger',
+      component: WebSocketDebugger,
+      meta: {
+        title: 'WebSocket 调试工具',
+      },
+    },
+    // 心跳机制测试
+    {
+      path: '/heartbeat-test',
+      name: 'heartbeat-test',
+      component: HeartbeatTest,
+      meta: {
+        title: '心跳机制测试',
       },
     },
   ],

@@ -246,7 +246,7 @@ const availableTypes = [
 // WebSocket配置
 const wsConfig = ref({
   url: 'ws://localhost:20914/ws/events',
-  heartbeatInterval: 30000,
+  heartbeatInterval: 10000, // 10秒 - 匹配服务器清理间隔
   reconnectInterval: 5000,
   maxReconnectAttempts: 5,
 })

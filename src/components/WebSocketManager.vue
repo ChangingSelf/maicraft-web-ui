@@ -27,6 +27,8 @@ interface WebSocketConfig {
   heartbeatInterval?: number
   reconnectInterval?: number
   maxReconnectAttempts?: number
+  enableHeartbeat?: boolean
+  autoReconnect?: boolean
 }
 
 interface WebSocketMessage {
@@ -65,9 +67,11 @@ let wsManager: any = null
 // 默认配置
 const defaultConfig: Required<WebSocketConfig> = {
   url: 'ws://localhost:20914/ws',
-  heartbeatInterval: 30000, // 30秒
+  heartbeatInterval: 10000, // 10秒 - 匹配服务器清理间隔
   reconnectInterval: 5000, // 5秒
   maxReconnectAttempts: 5,
+  enableHeartbeat: true,
+  autoReconnect: true,
 }
 
 const finalConfig = { ...defaultConfig, ...props.config }
@@ -84,6 +88,8 @@ const connect = () => {
       heartbeatInterval: finalConfig.heartbeatInterval,
       reconnectInterval: finalConfig.reconnectInterval,
       maxReconnectAttempts: finalConfig.maxReconnectAttempts,
+      enableHeartbeat: finalConfig.enableHeartbeat !== false,
+      autoReconnect: finalConfig.autoReconnect !== false,
     })
 
     // 添加消息处理器

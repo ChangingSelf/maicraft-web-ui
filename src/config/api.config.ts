@@ -51,7 +51,7 @@ export const API_CONFIG: GlobalApiConfig = {
     debug: import.meta.env.DEV || import.meta.env.VITE_API_DEBUG === 'true',
   },
   websocket: {
-    heartbeatInterval: parseInt(import.meta.env.VITE_WS_HEARTBEAT_INTERVAL || '30000'),
+    heartbeatInterval: parseInt(import.meta.env.VITE_WS_HEARTBEAT_INTERVAL || '10000'), // 10秒 - 匹配服务器清理间隔
     reconnectInterval: parseInt(import.meta.env.VITE_WS_RECONNECT_INTERVAL || '5000'),
     maxReconnectAttempts: parseInt(import.meta.env.VITE_WS_MAX_RECONNECT_ATTEMPTS || '5'),
     enableHeartbeat: import.meta.env.VITE_WS_ENABLE_HEARTBEAT !== 'false',

@@ -92,6 +92,16 @@
           </template>
         </el-menu-item>
 
+        <!-- 调试工具 -->
+        <el-sub-menu index="debug-tools">
+          <template #title>
+            <el-icon><Monitor /></el-icon>
+            <span>调试工具</span>
+          </template>
+          <el-menu-item index="websocket-debugger">WebSocket 调试</el-menu-item>
+          <el-menu-item index="heartbeat-test">心跳测试</el-menu-item>
+        </el-sub-menu>
+
         <!-- 设置 -->
         <el-menu-item index="settings">
           <el-icon><Setting /></el-icon>
@@ -147,14 +157,18 @@ const isMobile = ref(false)
 const showMobileSidebar = ref(false)
 
 // 版本信息
-const currentVersion = computed(() => {
+const currentVersion = ref('v1.1.4') // 默认版本
+
+// 异步获取版本信息
+const loadVersionInfo = async () => {
   try {
-    return formatVersion(getCurrentVersion())
+    const version = await getCurrentVersion()
+    currentVersion.value = formatVersion(version)
   } catch (error) {
     console.warn('获取版本信息失败:', error)
-    return 'v1.1.4' // 兜底版本
+    currentVersion.value = 'v1.1.4' // 兜底版本
   }
-})
+}
 
 // 当前激活的菜单项
 const activeIndex = computed(() => {
@@ -172,6 +186,9 @@ const activeIndex = computed(() => {
   if (path.startsWith('/players')) return 'players'
   if (path.startsWith('/monitoring')) return 'monitoring'
   if (path.startsWith('/game-monitoring')) return 'game-monitoring'
+  if (path.startsWith('/debug-tools')) return 'debug-tools'
+  if (path === '/websocket-debugger') return 'websocket-debugger'
+  if (path === '/heartbeat-test') return 'heartbeat-test'
   if (path === '/settings') return 'settings'
   return 'home'
 })
@@ -197,6 +214,7 @@ const updateSidebarMargin = () => {
 // 组件挂载时初始化
 onMounted(() => {
   updateSidebarMargin()
+  loadVersionInfo()
 })
 
 // 处理菜单选择
@@ -261,6 +279,12 @@ const handleSelect = (index: string) => {
       break
     case 'action-executor':
       router.push('/action-executor')
+      break
+    case 'websocket-debugger':
+      router.push('/websocket-debugger')
+      break
+    case 'heartbeat-test':
+      router.push('/heartbeat-test')
       break
     case 'settings':
       router.push('/settings')
