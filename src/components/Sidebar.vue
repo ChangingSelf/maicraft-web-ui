@@ -116,7 +116,7 @@
     <div class="sidebar-footer">
       <div class="version-info" v-if="!isCollapsed">
         <div class="version-display" @click="handleVersionClick">
-          <small>{{ currentVersion }}</small>
+          <small>{{ currentVersion }} （点击查看更新日志）</small>
         </div>
       </div>
       <div class="server-status" v-if="!isCollapsed">
@@ -168,11 +168,11 @@ const loadVersionInfo = () => {
     console.warn('获取版本信息失败:', error)
     // 使用配置文件中的版本作为兜底
     try {
-      const configVersion = '0.16.1' // 从 version.json 中获取
+      const configVersion = '0.0.0' // 从 version.json 中获取
       currentVersion.value = formatVersion(configVersion)
     } catch (configError) {
       console.warn('获取配置文件版本失败:', configError)
-      currentVersion.value = 'v1.1.4' // 最后的兜底版本
+      currentVersion.value = 'v0.0.0' // 最后的兜底版本
     }
   }
 }
