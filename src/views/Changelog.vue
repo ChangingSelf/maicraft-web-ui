@@ -110,27 +110,6 @@
                 <el-divider v-if="index < versionHistory.length - 1"></el-divider>
               </div>
             </div>
-
-            <!-- 版本分析面板 -->
-            <div class="version-analysis" v-if="versionAnalysis">
-              <el-divider>📊 版本分析</el-divider>
-              <div class="analysis-grid">
-                <div class="analysis-item">
-                  <div class="analysis-label">总版本数</div>
-                  <div class="analysis-value">{{ versionAnalysis.totalVersions }}</div>
-                </div>
-                <div class="analysis-item">
-                  <div class="analysis-label">平均变更数</div>
-                  <div class="analysis-value">{{ versionAnalysis.avgChangesPerVersion }}</div>
-                </div>
-                <div class="analysis-item">
-                  <div class="analysis-label">最常变更类型</div>
-                  <div class="analysis-value">
-                    {{ getCommitTypeLabel(versionAnalysis.mostCommonChangeType) }}
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
