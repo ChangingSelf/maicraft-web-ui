@@ -34,18 +34,9 @@ export interface VersionChanges {
 export interface VersionHistory {
   version: string
   date: string
-  type: string // 保留向后兼容性
-  semverType: 'major' | 'minor' | 'patch'
+  type: 'major' | 'minor' | 'patch'
   changes: VersionChanges
   summary: string
-}
-
-// 向后兼容的接口（保留旧结构）
-export interface LegacyVersionHistory {
-  version: string
-  date: string
-  type: 'major' | 'minor' | 'patch'
-  changelog: string[]
 }
 
 export interface FeatureInfo {
@@ -97,33 +88,15 @@ class VersionService {
     return this.packageVersion || this.versionConfig.current
   }
 
-  // 获取版本历史（新格式）
+  // 获取版本历史
   getVersionHistory(): VersionHistory[] {
-    return this.versionConfig.changelog.versions.map((version) => ({
-      ...version,
-      semverType: version.semverType || (version.type as 'major' | 'minor' | 'patch'),
-      changes: version.changes || {},
-      summary: version.summary || `版本 ${version.version} 更新`,
-    }))
-  }
-
-  // 获取版本历史（向后兼容格式）
-  getLegacyVersionHistory(): LegacyVersionHistory[] {
     return this.versionConfig.changelog.versions.map((version) => ({
       version: version.version,
       date: version.date,
-      type: version.semverType || (version.type as 'major' | 'minor' | 'patch'),
-      changelog: this.flattenChanges(version.changes || {}),
+      type: (version.semverType || version.type) as 'major' | 'minor' | 'patch',
+      changes: version.changes || {},
+      summary: version.summary || `版本 ${version.version} 更新`,
     }))
-  }
-
-  // 将新格式的changes转换为旧格式的changelog数组
-  private flattenChanges(changes: VersionChanges): string[] {
-    const result: string[] = []
-    Object.entries(changes).forEach(([type, items]) => {
-      items.forEach((item) => result.push(item))
-    })
-    return result
   }
 
   // 获取最新版本信息
@@ -134,12 +107,20 @@ class VersionService {
 
   // 获取所有功能列表
   getFeatures(): FeatureInfo[] {
-    return this.versionConfig.features
+    return this.versionConfig.features.map((feature) => ({
+      ...feature,
+      status: feature.status as FeatureInfo['status'],
+    }))
   }
 
   // 根据状态获取功能列表
   getFeaturesByStatus(status: FeatureInfo['status']): FeatureInfo[] {
-    return this.versionConfig.features.filter((feature) => feature.status === status)
+    return this.versionConfig.features
+      .filter((feature) => feature.status === status)
+      .map((feature) => ({
+        ...feature,
+        status: feature.status as FeatureInfo['status'],
+      }))
   }
 
   // 检查版本是否为最新
@@ -356,12 +337,11 @@ export const versionService = new VersionService()
 export const getCurrentVersion = () => versionService.getCurrentVersion()
 export const getVersionInfo = () => versionService.getVersionInfo()
 export const getVersionHistory = () => versionService.getVersionHistory()
-export const getLegacyVersionHistory = () => versionService.getLegacyVersionHistory()
 export const getFeatures = () => versionService.getFeatures()
 export const formatVersion = (version: string) => versionService.formatVersion(version)
 export const formatDate = (date: string) => versionService.formatDate(date)
 
-// 新的分析函数
+// 分析函数
 export const getRecommendedVersionType = (commitTypes: CommitType[]) =>
   versionService.getRecommendedVersionType(commitTypes)
 export const getVersionCommitStats = (version: VersionHistory) =>

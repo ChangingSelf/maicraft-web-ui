@@ -233,7 +233,13 @@ ${versionEntry.changelog.map((item) => `- ${item}`).join('\n')}
         changelogContent.slice(0, insertPoint) + newEntry + changelogContent.slice(insertPoint)
 
       fs.writeFileSync(changelogPath, changelogContent, 'utf8')
+
+      // 同时更新 public 目录下的 CHANGELOG.md
+      const publicChangelogPath = path.join(__dirname, '..', 'public', 'CHANGELOG.md')
+      fs.writeFileSync(publicChangelogPath, changelogContent, 'utf8')
+
       log(colors.green, 'CHANGELOG.md 已更新')
+      log(colors.green, 'public/CHANGELOG.md 已同步更新')
       log(colors.blue, `新版本 ${versionEntry.version} 已添加到 CHANGELOG.md`)
     } else {
       log(colors.yellow, '未找到合适的插入位置，跳过 CHANGELOG.md 更新')

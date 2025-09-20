@@ -3,10 +3,10 @@
     <div class="page-header">
       <h1 class="page-title">
         <el-icon class="title-icon"><InfoFilled /></el-icon>
-        版本信息与更新日志
+        版本信息与更新日志 ✨
       </h1>
       <div class="version-info">
-        <el-tag type="primary" size="large">当前版本: {{ currentVersion }}</el-tag>
+        <el-tag type="primary" size="large">🚀 当前版本: {{ currentVersion }}</el-tag>
         <el-tag type="info" size="small">最后更新: {{ lastUpdated }}</el-tag>
       </div>
     </div>
@@ -30,20 +30,6 @@
               <span class="label">发布日期:</span>
               <span class="value">{{ currentVersionDate }}</span>
             </div>
-            <div class="meta-item">
-              <span class="label">构建环境:</span>
-              <span class="value">{{ buildInfo }}</span>
-            </div>
-          </div>
-          <div class="version-description">
-            <h3>主要特性</h3>
-            <ul>
-              <li>🎮 完整的 Minecraft 服务器监控界面</li>
-              <li>📊 实时日志查看和过滤</li>
-              <li>🔧 MCP 协议集成支持</li>
-              <li>📈 玩家状态和世界信息监控</li>
-              <li>🎨 现代化的响应式设计</li>
-            </ul>
           </div>
         </div>
       </el-card>
@@ -64,10 +50,6 @@
               <el-icon><Refresh /></el-icon>
               刷新
             </el-button>
-            <el-button type="info" size="small" @click="checkForUpdates" class="update-btn">
-              <el-icon><InfoFilled /></el-icon>
-              检查更新
-            </el-button>
           </div>
         </template>
 
@@ -75,28 +57,81 @@
           <el-skeleton :loading="loading" animated :count="3" :rows="4" :throttle="500" />
         </div>
 
-        <div v-else-if="changelogContent" class="changelog-content">
-          <div class="changelog-markdown" v-html="parsedChangelog"></div>
+        <div v-else-if="versionHistory.length > 0" class="changelog-content-wrapper">
+          <div class="changelog-content">
+            <!-- 版本历史列表 -->
+            <div class="version-list">
+              <div
+                v-for="(version, index) in versionHistory"
+                :key="version.version"
+                class="version-item"
+              >
+                <div class="version-header">
+                  <div class="version-badge">
+                    <el-tag :type="getVersionTypeColor(version.type)">
+                      {{ getVersionTypeIcon(version.type) }}
+                      {{ version.version }}
+                    </el-tag>
+                  </div>
+                  <div class="version-date">
+                    <el-icon><Clock /></el-icon>
+                    {{ formatDate(version.date) }}
+                  </div>
+                </div>
 
-          <!-- 版本分析面板 -->
-          <div class="version-analysis" v-if="versionAnalysis">
-            <el-divider>📊 版本分析</el-divider>
-            <div class="analysis-grid">
-              <div class="analysis-item">
-                <div class="analysis-label">总版本数</div>
-                <div class="analysis-value">{{ versionAnalysis.totalVersions }}</div>
+                <div class="version-summary" v-if="version.summary">
+                  <p>{{ version.summary }}</p>
+                </div>
+
+                <!-- 变更详情 -->
+                <div class="changes-section">
+                  <div
+                    v-for="(items, type) in version.changes"
+                    :key="type"
+                    class="change-group"
+                    v-show="items.length > 0"
+                  >
+                    <div class="change-type-header">
+                      <el-icon :class="`type-icon-${String(type)}`">
+                        <component :is="getCommitTypeIcon(String(type))"></component>
+                      </el-icon>
+                      <span class="type-label">{{ getCommitTypeLabel(String(type)) }}</span>
+                      <el-tag size="mini" type="info">{{ String(items.length) }}</el-tag>
+                    </div>
+                    <ul class="change-list">
+                      <li v-for="(item, itemIndex) in items" :key="itemIndex" class="change-item">
+                        {{ item }}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <!-- 分隔线 -->
+                <el-divider v-if="index < versionHistory.length - 1"></el-divider>
               </div>
-              <div class="analysis-item">
-                <div class="analysis-label">平均变更数</div>
-                <div class="analysis-value">{{ versionAnalysis.avgChangesPerVersion }}</div>
-              </div>
-              <div class="analysis-item">
-                <div class="analysis-label">最常变更类型</div>
-                <div class="analysis-value">
-                  {{ getCommitTypeLabel(versionAnalysis.mostCommonChangeType) }}
+            </div>
+
+            <!-- 版本分析面板 -->
+            <div class="version-analysis" v-if="versionAnalysis">
+              <el-divider>📊 版本分析</el-divider>
+              <div class="analysis-grid">
+                <div class="analysis-item">
+                  <div class="analysis-label">总版本数</div>
+                  <div class="analysis-value">{{ versionAnalysis.totalVersions }}</div>
+                </div>
+                <div class="analysis-item">
+                  <div class="analysis-label">平均变更数</div>
+                  <div class="analysis-value">{{ versionAnalysis.avgChangesPerVersion }}</div>
+                </div>
+                <div class="analysis-item">
+                  <div class="analysis-label">最常变更类型</div>
+                  <div class="analysis-value">
+                    {{ getCommitTypeLabel(versionAnalysis.mostCommonChangeType) }}
+                  </div>
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
 
@@ -112,42 +147,37 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
-import { InfoFilled, Star, DocumentChecked, Refresh } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import MarkdownIt from 'markdown-it'
-import markdownItHighlightjs from 'markdown-it-highlightjs'
-import markdownItAnchor from 'markdown-it-anchor'
-import hljs from 'highlight.js'
 import {
-  versionService,
+  InfoFilled,
+  Star,
+  DocumentChecked,
+  Refresh,
+  Clock,
+  Plus,
+  Warning,
+  Document,
+  Brush,
+  Refresh as RefreshIcon,
+  Lightning,
+  Help,
+  Setting,
+  Avatar,
+  Box,
+} from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import {
   getCurrentVersion,
   getVersionInfo,
   formatVersion,
   formatDate,
   analyzeVersionTrends,
+  getVersionHistory,
+  type VersionHistory,
 } from '../services/versionService'
-
-// 配置markdown-it
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true,
-  breaks: true,
-})
-  .use(markdownItHighlightjs, {
-    hljs,
-    auto: true,
-    code: true,
-  })
-  .use(markdownItAnchor, {
-    permalink: true,
-    permalinkBefore: true,
-    permalinkSymbol: '§',
-  })
 
 // 响应式数据
 const loading = ref(false)
-const changelogContent = ref('')
+const versionHistory = ref<VersionHistory[]>([])
 const versionInfo = ref(getVersionInfo())
 const versionAnalysis = ref(analyzeVersionTrends())
 
@@ -157,35 +187,17 @@ const lastUpdated = computed(() => versionInfo.value.lastUpdated)
 const currentVersionDate = computed(() => formatDate(versionInfo.value.buildDate))
 const buildInfo = computed(() => versionInfo.value.buildInfo)
 
-// 解析后的更新日志HTML
-const parsedChangelog = computed(() => {
-  if (!changelogContent.value) return ''
-
-  try {
-    return md.render(changelogContent.value)
-  } catch (error) {
-    console.error('Markdown解析错误:', error)
-    ElMessage.error('Markdown解析失败')
-    return '<p>Markdown解析失败，请检查内容格式</p>'
-  }
-})
-
-// 获取更新日志内容
+// 获取版本历史数据
 const fetchChangelog = async () => {
   try {
     loading.value = true
-    const response = await fetch('/CHANGELOG.md')
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
-    }
-
-    const content = await response.text()
-    changelogContent.value = content
+    // 直接从 version.json 获取版本历史
+    const history = getVersionHistory()
+    versionHistory.value = history
   } catch (error) {
-    console.error('获取更新日志失败:', error)
-    ElMessage.error('获取更新日志失败，请稍后重试')
-    changelogContent.value = ''
+    console.error('获取版本历史失败:', error)
+    ElMessage.error('获取版本历史失败，请稍后重试')
+    versionHistory.value = []
   } finally {
     loading.value = false
   }
@@ -211,27 +223,52 @@ const getCommitTypeLabel = (type: string | null) => {
   return labels[type] || type
 }
 
-// 刷新更新日志
+// 获取提交类型的图标
+const getCommitTypeIcon = (type: string) => {
+  const icons: Record<string, any> = {
+    feat: Plus,
+    fix: Warning,
+    docs: Document,
+    style: Brush,
+    refactor: RefreshIcon,
+    perf: Lightning,
+    test: Help,
+    chore: Setting,
+    ci: Avatar,
+    build: Box,
+  }
+
+  return icons[type] || InfoFilled
+}
+
+// 获取版本类型的颜色
+const getVersionTypeColor = (type: string) => {
+  const colors: Record<string, string> = {
+    major: 'danger',
+    minor: 'success',
+    patch: 'warning',
+  }
+
+  return colors[type] || 'info'
+}
+
+// 获取版本类型的图标
+const getVersionTypeIcon = (type: string) => {
+  const icons: Record<string, string> = {
+    major: '🚀',
+    minor: '📈',
+    patch: '🐛',
+  }
+
+  return icons[type] || '📦'
+}
+
+// 刷新版本信息
 const refreshChangelog = () => {
   fetchChangelog()
   // 重新获取版本信息
   versionInfo.value = getVersionInfo()
   versionAnalysis.value = analyzeVersionTrends()
-}
-
-// 检查版本更新
-const checkForUpdates = async () => {
-  try {
-    const updateInfo = await versionService.checkForUpdates()
-    if (updateInfo.hasUpdate) {
-      ElMessage.info(`发现新版本 ${formatVersion(updateInfo.latestVersion!)}，请及时更新`)
-    } else {
-      ElMessage.success('当前已是最新版本')
-    }
-  } catch (error) {
-    console.error('检查更新失败:', error)
-    ElMessage.warning('检查更新失败')
-  }
 }
 
 // 组件挂载时获取更新日志
@@ -245,6 +282,10 @@ onMounted(() => {
   padding: 24px;
   max-width: 1200px;
   margin: 0 auto;
+  min-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
 }
 
 .page-header {
@@ -277,16 +318,32 @@ onMounted(() => {
   align-items: center;
 }
 
+.version-info .el-tag {
+  font-size: 16px !important;
+  font-weight: 600 !important;
+  padding: 8px 16px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
 .content-wrapper {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  flex: 1;
 }
 
-.current-version-card,
+.current-version-card {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
 .changelog-card {
   border-radius: 12px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
 .card-header {
@@ -304,10 +361,6 @@ onMounted(() => {
 
 .refresh-btn {
   margin-left: auto;
-}
-
-.update-btn {
-  margin-left: 8px;
 }
 
 .version-details {
@@ -335,25 +388,10 @@ onMounted(() => {
 }
 
 .value {
-  font-size: 16px;
-  color: #333;
-  font-weight: 600;
-}
-
-.version-description h3 {
-  margin: 0 0 12px 0;
-  font-size: 18px;
-  color: #333;
-}
-
-.version-description ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.version-description li {
-  margin-bottom: 8px;
-  line-height: 1.5;
+  font-size: 20px !important;
+  color: #1a1a1a !important;
+  font-weight: 700 !important;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
 }
 
 .loading-container {
@@ -365,238 +403,313 @@ onMounted(() => {
   text-align: center;
 }
 
+.changelog-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+}
+
 .changelog-content {
-  max-height: 600px;
+  flex: 1;
   overflow-y: auto;
 }
 
-/* Markdown 样式 */
-.changelog-markdown {
-  line-height: 1.6;
-  color: #333;
+/* 版本列表样式 */
+.version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.changelog-markdown h1,
-.changelog-markdown h2,
-.changelog-markdown h3,
-.changelog-markdown h4,
-.changelog-markdown h5,
-.changelog-markdown h6 {
-  margin-top: 24px;
-  margin-bottom: 12px;
-  color: #333;
-  font-weight: 600;
+.version-item {
+  padding: 24px;
+  border: 1px solid #e4e7ed;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-}
-
-.changelog-markdown h1 {
-  font-size: 24px;
-  border-bottom: 2px solid #409eff;
-  padding-bottom: 8px;
-}
-
-.changelog-markdown h2 {
-  font-size: 20px;
-  border-bottom: 1px solid #e6e6e6;
-  padding-bottom: 6px;
-}
-
-.changelog-markdown h3 {
-  font-size: 18px;
-  color: #409eff;
-}
-
-.changelog-markdown h4 {
-  font-size: 16px;
-  color: #666;
-}
-
-.changelog-markdown p {
-  margin-bottom: 12px;
-  line-height: 1.7;
-}
-
-.changelog-markdown ul,
-.changelog-markdown ol {
-  margin-bottom: 16px;
-  padding-left: 24px;
-}
-
-.changelog-markdown li {
-  margin-bottom: 6px;
-  line-height: 1.6;
-}
-
-.changelog-markdown li > p {
-  margin-bottom: 6px;
-}
-
-.changelog-markdown code {
-  background-color: #f6f8fa;
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  color: #d73a49;
-  border: 1px solid #e1e4e8;
-}
-
-.changelog-markdown pre {
-  background-color: #f6f8fa;
-  border-radius: 8px;
-  padding: 16px;
-  overflow-x: auto;
-  margin: 16px 0;
-  border: 1px solid #e1e4e8;
-  position: relative;
-}
-
-.changelog-markdown pre code {
-  background-color: transparent;
-  padding: 0;
-  color: inherit;
-  border: none;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-/* 代码块语法高亮 */
-.changelog-markdown pre.hljs {
-  background-color: #2d3748;
-  color: #e2e8f0;
-  border: none;
-}
-
-.changelog-markdown pre.hljs code {
-  color: inherit;
-}
-
-.changelog-markdown a {
-  color: #409eff;
-  text-decoration: none;
-  transition: all 0.3s ease;
-}
-
-.changelog-markdown a:hover {
-  text-decoration: underline;
-  color: #66b1ff;
-}
-
-.changelog-markdown blockquote {
-  border-left: 4px solid #409eff;
-  padding-left: 16px;
-  margin: 16px 0;
-  color: #666;
-  font-style: italic;
-  background-color: #f8f9fa;
-  padding: 12px 16px;
-  border-radius: 0 6px 6px 0;
-  margin-left: 0;
-}
-
-.changelog-markdown blockquote p {
-  margin-bottom: 0;
-  font-style: italic;
-  color: #555;
-}
-
-/* 表格样式 */
-.changelog-markdown table {
-  border-collapse: collapse;
-  width: 100%;
-  margin: 16px 0;
-  background-color: #fff;
-  border: 1px solid #e1e4e8;
-  border-radius: 6px;
   overflow: hidden;
 }
 
-.changelog-markdown thead {
-  background-color: #f6f8fa;
-}
-
-.changelog-markdown th,
-.changelog-markdown td {
-  border: 1px solid #e1e4e8;
-  padding: 8px 12px;
-  text-align: left;
-}
-
-.changelog-markdown th {
-  font-weight: 600;
-  color: #333;
-}
-
-.changelog-markdown tbody tr:hover {
-  background-color: #f8f9fa;
-}
-
-/* 标题锚点样式 */
-.changelog-markdown .header-anchor {
-  color: #409eff;
-  text-decoration: none;
-  margin-left: 8px;
+.version-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #409eff 0%, #66b1ff 100%);
   opacity: 0;
   transition: opacity 0.3s ease;
-  font-size: 14px;
 }
 
-.changelog-markdown h1:hover .header-anchor,
-.changelog-markdown h2:hover .header-anchor,
-.changelog-markdown h3:hover .header-anchor,
-.changelog-markdown h4:hover .header-anchor,
-.changelog-markdown h5:hover .header-anchor,
-.changelog-markdown h6:hover .header-anchor {
+.version-item:hover {
+  box-shadow: 0 8px 32px rgba(64, 158, 255, 0.15);
+  border-color: #409eff;
+  transform: translateY(-2px);
+}
+
+.version-item:hover::before {
   opacity: 1;
 }
 
-.changelog-markdown .header-anchor:hover {
-  text-decoration: none;
+.version-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f2f5;
 }
 
-/* 表情符号样式 */
-.changelog-markdown .emoji {
-  font-family: 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+.version-badge {
+  display: flex;
+  align-items: center;
 }
 
-/* 水平线样式 */
-.changelog-markdown hr {
-  border: none;
-  height: 1px;
-  background: linear-gradient(to right, transparent, #e1e4e8, transparent);
-  margin: 24px 0;
+.version-badge .el-tag {
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  padding: 10px 20px !important;
+  border-radius: 25px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%) !important;
+  color: white !important;
+  border: none !important;
 }
 
-/* 任务列表样式 */
-.changelog-markdown input[type='checkbox'] {
+.version-date {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #909399;
+  font-size: 14px;
+  background: #f8f9fa;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-weight: 500;
+}
+
+.version-summary {
+  margin: 12px 0;
+}
+
+.version-summary p {
+  margin: 0;
+  color: #303133;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* 变更部分样式 */
+.changes-section {
+  margin-top: 16px;
+}
+
+.change-group {
+  margin-bottom: 16px;
+}
+
+.change-type-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+  border-radius: 10px;
+  border-left: 4px solid #409eff;
+  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
+  transition: all 0.3s ease;
+}
+
+.change-type-header:hover {
+  transform: translateX(2px);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
+}
+
+.type-icon-feat {
+  color: #52c41a;
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
   margin-right: 8px;
-  accent-color: #409eff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-fix {
+  color: #ff4d4f;
+  background: linear-gradient(135deg, #fff2f0 0%, #ffccc7 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-docs {
+  color: #722ed1;
+  background: linear-gradient(135deg, #f9f0ff 0%, #d3adf7 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-style {
+  color: #fa8c16;
+  background: linear-gradient(135deg, #fff7e6 0%, #ffd591 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-refactor {
+  color: #1890ff;
+  background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-perf {
+  color: #faad14;
+  background: linear-gradient(135deg, #fffbe6 0%, #ffe58f 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-test {
+  color: #13c2c2;
+  background: linear-gradient(135deg, #e6fffb 0%, #87e8de 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-chore {
+  color: #bfbfbf;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-ci {
+  color: #40a9ff;
+  background: linear-gradient(135deg, #f0f8ff 0%, #bae7ff 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+}
+.type-icon-build {
+  color: #36cfc9;
+  background: linear-gradient(135deg, #f0fdff 0%, #b5f5ec 100%);
+  border-radius: 6px;
+  padding: 6px;
+  font-size: 16px;
+  margin-right: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
 }
 
-/* 内联元素间距 */
-.changelog-markdown strong {
+.type-label {
   font-weight: 600;
-  color: #333;
+  color: #303133;
 }
 
-.changelog-markdown em {
-  font-style: italic;
-  color: #666;
+.change-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e8f2ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-/* 键盘快捷键样式 */
-.changelog-markdown kbd {
-  background-color: #f6f8fa;
-  border: 1px solid #e1e4e8;
-  border-radius: 4px;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
-  color: #333;
-  display: inline-block;
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 12px;
-  line-height: 1;
-  padding: 2px 4px;
-  margin: 0 2px;
+.change-item {
+  padding: 12px 20px 12px 40px;
+  border-bottom: 1px solid #f0f2f5;
+  position: relative;
+  line-height: 1.6;
+  transition: all 0.2s ease;
+}
+
+.change-item:last-child {
+  border-bottom: none;
+}
+
+.change-item:hover {
+  background: rgba(64, 158, 255, 0.02);
+  padding-left: 44px;
+}
+
+.change-item::before {
+  content: '▸';
+  color: #409eff;
+  font-weight: bold;
+  margin-right: 10px;
+  position: absolute;
+  left: 16px;
+  top: 12px;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.change-item:hover::before {
+  color: #66b1ff;
+  transform: scale(1.1);
 }
 
 /* 滚动条样式 */
@@ -618,15 +731,6 @@ onMounted(() => {
   background: #a8a8a8;
 }
 
-/* 版本分析面板样式 */
-.version-analysis {
-  margin-top: 24px;
-  padding: 20px;
-  background-color: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e1e4e8;
-}
-
 .analysis-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -636,23 +740,36 @@ onMounted(() => {
 
 .analysis-item {
   text-align: center;
-  padding: 16px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  background: linear-gradient(135deg, #ffffff 0%, #fafbfc 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.08);
+  border: 1px solid #e8f2ff;
+  transition: all 0.3s ease;
+}
+
+.analysis-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(64, 158, 255, 0.15);
 }
 
 .analysis-label {
   font-size: 14px;
   color: #666;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .analysis-value {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
   color: #409eff;
+  background: linear-gradient(135deg, #409eff 0%, #66b1ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 /* 响应式设计 */
