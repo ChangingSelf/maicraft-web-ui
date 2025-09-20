@@ -138,20 +138,44 @@ import {
   CircleClose,
 } from '@element-plus/icons-vue'
 import {
-  gameWSManagers,
-  gameData,
+  getWebSocketManager,
   connectWorldWS,
   disconnectWorldWS,
   subscribeWorldWS,
-} from '../services/gameWebSocket'
+} from '../services/websocket'
+import { reactive } from 'vue'
+
+// 本地世界数据存储
+const worldDataStore = reactive({
+  time: {
+    time_of_day: 0,
+    formatted_time: '',
+    day_count: 0,
+  },
+  weather: {
+    weather: '',
+    formatted_weather: '',
+    duration: 0,
+  },
+  location: {
+    dimension: '',
+    biome: '',
+    light_level: 0,
+  },
+  nearby_blocks: [],
+  nearby_entities: [],
+})
+
+// WebSocket管理器
+const worldWSManager = getWebSocketManager('WORLD')
 
 // 连接状态
-const isConnected = computed(() => gameWSManagers.world.isConnected)
+const isConnected = computed(() => worldWSManager.isConnected)
 
 // 世界数据
-const worldData = computed(() => gameData.world)
-const nearbyBlocks = computed(() => gameData.world.nearby_blocks || [])
-const nearbyEntities = computed(() => gameData.world.nearby_entities || [])
+const worldData = computed(() => worldDataStore)
+const nearbyBlocks = computed(() => worldDataStore.nearby_blocks || [])
+const nearbyEntities = computed(() => worldDataStore.nearby_entities || [])
 
 // 连接状态显示
 const connectionStatus = computed(() => {
@@ -190,6 +214,16 @@ const getHealthColor = (health: number, maxHealth: number) => {
   return '#F56C6C'
 }
 
+// 消息处理器
+const handleWorldMessage = (message: any) => {
+  if (message.type === 'world_update') {
+    // 更新世界数据
+    Object.assign(worldDataStore, message.data)
+  } else if (message.type === 'pong') {
+    console.log('[WorldInfo] Heartbeat received')
+  }
+}
+
 // 连接状态变化处理
 const handleConnectionChange = (connected: boolean) => {
   if (connected) {
@@ -202,13 +236,17 @@ const handleConnectionChange = (connected: boolean) => {
 
 // 组件挂载和卸载
 onMounted(() => {
+  // 添加消息处理器
+  worldWSManager.addMessageHandler(handleWorldMessage)
   // 添加连接状态监听器
-  gameWSManagers.world.addConnectionHandler(handleConnectionChange)
+  worldWSManager.addConnectionHandler(handleConnectionChange)
 })
 
 onUnmounted(() => {
+  // 移除消息处理器
+  worldWSManager.removeMessageHandler(handleWorldMessage)
   // 移除连接状态监听器
-  gameWSManagers.world.removeConnectionHandler(handleConnectionChange)
+  worldWSManager.removeConnectionHandler(handleConnectionChange)
   // 断开连接
   disconnectWorldWS()
 })

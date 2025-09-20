@@ -1,4 +1,6 @@
 import versionConfig from '../config/version.json'
+import { httpClient } from './httpClient'
+import type { ApiException } from '../types/api'
 
 // 类型定义
 export interface VersionInfo {
@@ -28,7 +30,17 @@ export type CommitType =
   | 'build' // 构建过程或外部依赖的变动
 
 export interface VersionChanges {
-  [key: string]: string[] // key 为 CommitType，value 为变更列表
+  feat?: string[]
+  fix?: string[]
+  docs?: string[]
+  style?: string[]
+  refactor?: string[]
+  perf?: string[]
+  test?: string[]
+  chore?: string[]
+  ci?: string[]
+  build?: string[]
+  [key: string]: string[] | undefined // 支持其他自定义类型
 }
 
 export interface VersionHistory {
@@ -46,31 +58,108 @@ export interface FeatureInfo {
   status: 'stable' | 'beta' | 'planned' | 'deprecated'
 }
 
+// 版本服务错误类型
+export class VersionServiceError extends Error {
+  constructor(
+    message: string,
+    public readonly code: string,
+    public readonly cause?: Error,
+  ) {
+    super(message)
+    this.name = 'VersionServiceError'
+  }
+}
+
 // 版本管理服务类
 class VersionService {
   private versionConfig = versionConfig
   private packageVersion = ''
+  private isPackageVersionLoaded = false
+  private packageVersionLoadPromise: Promise<void> | null = null
 
   constructor() {
     this.loadPackageVersion()
   }
 
-  // 从 package.json 加载版本信息
-  private async loadPackageVersion() {
+  // 从 package.json 加载版本信息（带重试机制）
+  private async loadPackageVersion(): Promise<void> {
+    if (this.isPackageVersionLoaded) {
+      return
+    }
+
+    if (this.packageVersionLoadPromise) {
+      return this.packageVersionLoadPromise
+    }
+
+    this.packageVersionLoadPromise = this.loadPackageVersionWithRetry()
+
     try {
-      const packageJson = await fetch('/package.json')
-      const packageData = await packageJson.json()
-      this.packageVersion = packageData.version || '0.0.0'
+      await this.packageVersionLoadPromise
     } catch (error) {
-      console.warn('无法加载 package.json 版本信息:', error)
+      // 即使加载失败也不要抛出异常，只记录警告
+      console.warn('VersionService: Failed to load package version:', error)
       this.packageVersion = '0.0.0'
+    } finally {
+      this.isPackageVersionLoaded = true
     }
   }
 
+  private async loadPackageVersionWithRetry(maxRetries = 3): Promise<void> {
+    let lastError: Error | null = null
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await httpClient.get<{ version: string }>('/package.json', {
+          timeout: 5000, // 5秒超时
+          retry: false, // 手动处理重试
+        })
+
+        if (response.isSuccess && response.data?.version) {
+          this.packageVersion = response.data.version
+          return
+        } else {
+          throw new VersionServiceError('Invalid package.json response', 'INVALID_PACKAGE_RESPONSE')
+        }
+      } catch (error) {
+        lastError = error as Error
+        console.warn(`VersionService: Attempt ${attempt}/${maxRetries} failed:`, error)
+
+        // 如果不是最后一次尝试，等待后重试
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt)) // 递增延迟
+        }
+      }
+    }
+
+    // 所有重试都失败了
+    throw new VersionServiceError(
+      `Failed to load package version after ${maxRetries} attempts`,
+      'PACKAGE_LOAD_FAILED',
+      lastError || undefined,
+    )
+  }
+
   // 获取当前版本信息
-  getVersionInfo(): VersionInfo {
+  async getVersionInfo(): Promise<VersionInfo> {
+    const version = await this.getCurrentVersion()
     return {
-      version: this.getCurrentVersion(),
+      version,
+      name: this.versionConfig.name,
+      description: this.versionConfig.description,
+      buildDate: this.versionConfig.buildDate,
+      buildTime: this.versionConfig.buildTime,
+      buildInfo: this.versionConfig.buildInfo,
+      author: this.versionConfig.author,
+      repository: this.versionConfig.repository,
+      license: this.versionConfig.license,
+      lastUpdated: this.versionConfig.changelog.lastUpdated,
+    }
+  }
+
+  // 同步版本的getVersionInfo（向后兼容）
+  getVersionInfoSync(): VersionInfo {
+    return {
+      version: this.getCurrentVersionSync(),
       name: this.versionConfig.name,
       description: this.versionConfig.description,
       buildDate: this.versionConfig.buildDate,
@@ -84,7 +173,14 @@ class VersionService {
   }
 
   // 获取当前版本号（优先使用 package.json，否则使用配置文件）
-  getCurrentVersion(): string {
+  async getCurrentVersion(): Promise<string> {
+    // 确保package.json已加载
+    await this.loadPackageVersion()
+    return this.packageVersion || this.versionConfig.current
+  }
+
+  // 同步版本的getCurrentVersion（向后兼容）
+  getCurrentVersionSync(): string {
     return this.packageVersion || this.versionConfig.current
   }
 
@@ -93,7 +189,7 @@ class VersionService {
     return this.versionConfig.changelog.versions.map((version) => ({
       version: version.version,
       date: version.date,
-      type: (version.semverType || version.type) as 'major' | 'minor' | 'patch',
+      type: (version.type || 'patch') as 'major' | 'minor' | 'patch',
       changes: version.changes || {},
       summary: version.summary || `版本 ${version.version} 更新`,
     }))
@@ -136,22 +232,39 @@ class VersionService {
 
   // 格式化日期显示
   formatDate(date: string): string {
+    if (!date || typeof date !== 'string') {
+      console.warn('VersionService: Invalid date provided:', date)
+      return '未知日期'
+    }
+
     try {
       const dateObj = new Date(date)
+
+      // 检查日期是否有效
+      if (isNaN(dateObj.getTime())) {
+        throw new VersionServiceError(`Invalid date format: ${date}`, 'INVALID_DATE_FORMAT')
+      }
+
       return dateObj.toLocaleDateString('zh-CN', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
       })
     } catch (error) {
-      return date
+      console.warn('VersionService: Failed to format date:', date, error)
+      return date // 返回原始字符串作为fallback
     }
   }
 
   // 获取构建信息
   getBuildInfo(): string {
-    const versionInfo = this.getVersionInfo()
-    return `${versionInfo.buildInfo} (${versionInfo.buildDate})`
+    try {
+      const versionInfo = this.getVersionInfoSync()
+      return `${versionInfo.buildInfo} (${versionInfo.buildDate})`
+    } catch (error) {
+      console.warn('VersionService: Failed to get build info:', error)
+      return '构建信息不可用'
+    }
   }
 
   // 获取版本比较信息
@@ -172,7 +285,7 @@ class VersionService {
 
   // 获取下一个版本号建议
   getNextVersion(type: 'major' | 'minor' | 'patch' = 'patch'): string {
-    const currentVersion = this.getCurrentVersion()
+    const currentVersion = this.getCurrentVersionSync()
     const [major, minor, patch] = currentVersion.split('.').map(Number)
 
     switch (type) {
@@ -187,20 +300,49 @@ class VersionService {
     }
   }
 
-  // 检查是否有新版本可用（模拟）
+  // 检查是否有新版本可用
   async checkForUpdates(): Promise<{
     hasUpdate: boolean
     latestVersion?: string
     currentVersion: string
+    error?: string
   }> {
-    // 这里可以实现实际的版本检查逻辑，比如从服务器API获取最新版本
-    const currentVersion = this.getCurrentVersion()
-    const latestVersion = this.getLatestVersion()?.version || currentVersion
+    try {
+      // 确保版本信息已加载
+      await this.loadPackageVersion()
 
-    return {
-      hasUpdate: this.compareVersions(latestVersion, currentVersion) > 0,
-      latestVersion,
-      currentVersion,
+      const currentVersion = this.getCurrentVersionSync()
+
+      // 这里可以实现实际的版本检查逻辑，比如从服务器API获取最新版本
+      // 目前使用本地配置文件的最新版本作为示例
+      const latestVersion = this.getLatestVersion()?.version || currentVersion
+
+      // 比较版本
+      let hasUpdate = false
+      try {
+        hasUpdate = this.compareVersions(latestVersion, currentVersion) > 0
+      } catch (compareError) {
+        console.warn('VersionService: Failed to compare versions:', compareError)
+        // 如果比较失败，假设没有更新
+        hasUpdate = false
+      }
+
+      return {
+        hasUpdate,
+        latestVersion,
+        currentVersion,
+      }
+    } catch (error) {
+      console.warn('VersionService: Failed to check for updates:', error)
+
+      // 返回安全的结果
+      const currentVersion = this.getCurrentVersionSync()
+      return {
+        hasUpdate: false,
+        latestVersion: currentVersion,
+        currentVersion,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+      }
     }
   }
 
@@ -231,7 +373,7 @@ class VersionService {
     }
 
     Object.entries(version.changes).forEach(([type, items]) => {
-      if (type in stats) {
+      if (type in stats && items) {
         stats[type as CommitType] = items.length
       }
     })
@@ -278,7 +420,10 @@ class VersionService {
     const totalChanges = versions.reduce((sum, version) => {
       return (
         sum +
-        Object.values(version.changes).reduce((typeSum, changes) => typeSum + changes.length, 0)
+        Object.values(version.changes).reduce(
+          (typeSum, changes) => typeSum + (changes?.length || 0),
+          0,
+        )
       )
     }, 0)
     const avgChangesPerVersion = totalChanges / totalVersions
@@ -299,7 +444,7 @@ class VersionService {
 
     versions.forEach((version) => {
       Object.entries(version.changes).forEach(([type, changes]) => {
-        if (type in typeStats) {
+        if (type in typeStats && changes) {
           typeStats[type as CommitType] += changes.length
         }
       })
@@ -333,9 +478,13 @@ class VersionService {
 // 导出单例实例
 export const versionService = new VersionService()
 
-// 导出便捷函数
+// 导出便捷函数（异步版本）
 export const getCurrentVersion = () => versionService.getCurrentVersion()
 export const getVersionInfo = () => versionService.getVersionInfo()
+
+// 导出便捷函数（同步版本，用于向后兼容）
+export const getCurrentVersionSync = () => versionService.getCurrentVersionSync()
+export const getVersionInfoSync = () => versionService.getVersionInfoSync()
 export const getVersionHistory = () => versionService.getVersionHistory()
 export const getFeatures = () => versionService.getFeatures()
 export const formatVersion = (version: string) => versionService.formatVersion(version)

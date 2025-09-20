@@ -1,12 +1,6 @@
 // MCP 工具 API 服务
-const API_BASE = 'http://localhost:20914/api'
-
-// API 响应基础类型
-interface ApiResponse<T = any> {
-  isSuccess: boolean
-  message: string
-  data: T
-}
+import { httpClient } from './httpClient'
+import type { ApiResponse } from '../types/api'
 
 // MCP 工具类型定义
 export interface MCPTool {
@@ -86,43 +80,15 @@ export interface ToolCallsResponse {
 
 // API 工具类
 class MCPApiService {
-  private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-    try {
-      const url = `${API_BASE}${endpoint}`
-      const response = await fetch(url, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
-        ...options,
-      })
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data: ApiResponse<T> = await response.json()
-
-      if (!data.isSuccess) {
-        throw new Error(data.message || 'API request failed')
-      }
-
-      return data
-    } catch (error) {
-      console.error('API request failed:', error)
-      throw error
-    }
-  }
-
   // 获取工具列表
   async getTools(): Promise<ToolsResponse> {
-    const response = await this.request<ToolsResponse>('/mcp/tools')
+    const response = await httpClient.get<ToolsResponse>('/mcp/tools')
     return response.data
   }
 
   // 获取工具详情
   async getToolDetail(toolName: string): Promise<MCPTool> {
-    const response = await this.request<MCPTool>(`/mcp/tools/${toolName}`)
+    const response = await httpClient.get<MCPTool>(`/mcp/tools/${toolName}`)
     return response.data
   }
 
@@ -132,34 +98,47 @@ class MCPApiService {
       tool_name: toolName,
       arguments: arguments_,
     }
-    const response = await this.request<ToolCall>('/mcp/tools/call', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    })
+    const response = await httpClient.post<ToolCall>('/mcp/tools/call', request)
     return response.data
   }
 
   // 获取调用历史
   async getToolCalls(query?: ToolCallsQuery): Promise<ToolCallsResponse> {
-    const params = new URLSearchParams()
-    if (query?.limit) params.append('limit', query.limit.toString())
-    if (query?.tool_name) params.append('tool_name', query.tool_name)
-    if (query?.status) params.append('status', query.status)
-    if (query?.start_time) params.append('start_time', query.start_time.toString())
-    if (query?.end_time) params.append('end_time', query.end_time.toString())
+    const params: Record<string, any> = {}
+    if (query?.limit) params.limit = query.limit
+    if (query?.tool_name) params.tool_name = query.tool_name
+    if (query?.status) params.status = query.status
+    if (query?.start_time) params.start_time = query.start_time
+    if (query?.end_time) params.end_time = query.end_time
 
-    const queryString = params.toString()
-    const endpoint = `/mcp/tools/calls${queryString ? `?${queryString}` : ''}`
-
-    const response = await this.request<ToolCallsResponse>(endpoint)
+    const response = await httpClient.get<ToolCallsResponse>('/mcp/tools/calls', params)
     return response.data
   }
 
   // 批量调用工具
   async batchCallTools(request: BatchCallRequest): Promise<BatchCallResponse> {
-    const response = await this.request<BatchCallResponse>('/mcp/tools/batch', {
-      method: 'POST',
-      body: JSON.stringify(request),
+    const response = await httpClient.post<BatchCallResponse>('/mcp/tools/batch', request)
+    return response.data
+  }
+
+  // 获取工具调用统计
+  async getToolStats(): Promise<{
+    total_calls: number
+    success_rate: number
+    avg_execution_time: number
+  }> {
+    const response = await httpClient.get('/mcp/tools/stats')
+    return response.data
+  }
+
+  // 验证工具参数
+  async validateToolArguments(
+    toolName: string,
+    arguments_: Record<string, any>,
+  ): Promise<{ valid: boolean; errors?: string[] }> {
+    const response = await httpClient.post('/mcp/tools/validate', {
+      tool_name: toolName,
+      arguments: arguments_,
     })
     return response.data
   }

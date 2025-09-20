@@ -65,6 +65,7 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document } from '@element-plus/icons-vue'
+import { createWebSocketManager } from '@/services/websocket'
 import FilterPanel from '@/components/FilterPanel.vue'
 import LogControls from './LogControls.vue'
 import LogStats from './LogStats.vue'
@@ -169,10 +170,8 @@ const settings = ref({
   rateLimitPerSecond: 10, // 每秒最大日志条数
 })
 
-// WebSocket实例
-let ws: WebSocket | null = null
-let reconnectTimer: number | null = null
-let heartbeatTimer: number | null = null
+// WebSocket管理器实例
+let wsManager: any = null
 
 // 计算属性
 const filteredLogs = computed(() => {
@@ -379,40 +378,40 @@ const truncateMessage = (message: string): string => {
 
 // WebSocket相关方法
 const connect = () => {
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (wsManager && wsManager.isConnected) {
     return
   }
 
   try {
-    ws = new WebSocket(settings.value.wsUrl)
+    // 创建WebSocket管理器
+    wsManager = createWebSocketManager(settings.value.wsUrl, {
+      heartbeatInterval: 30000,
+      reconnectInterval: 5000,
+      maxReconnectAttempts: 5,
+    })
 
-    ws.onopen = () => {
-      isConnected.value = true
-      ElMessage.success('WebSocket连接成功')
-      subscribeToLogs()
-      startHeartbeat()
-    }
+    // 添加消息处理器
+    wsManager.addMessageHandler(handleMessage)
 
-    ws.onmessage = (event) => {
-      try {
-        const data: WebSocketMessage = JSON.parse(event.data)
-        handleMessage(data)
-      } catch (error) {
-        console.error('解析WebSocket消息失败:', error)
+    // 添加连接状态处理器
+    wsManager.addConnectionHandler((connected: boolean) => {
+      isConnected.value = connected
+      if (connected) {
+        ElMessage.success('WebSocket连接成功')
+        subscribeToLogs()
+      } else {
+        ElMessage.warning('WebSocket连接断开')
       }
-    }
+    })
 
-    ws.onclose = () => {
-      isConnected.value = false
-      ElMessage.warning('WebSocket连接断开')
-      stopHeartbeat()
-      // 移除自动重连调用，保持手动连接模式
-    }
-
-    ws.onerror = (error) => {
+    // 添加错误处理器
+    wsManager.addErrorHandler((error: Event) => {
       console.error('WebSocket错误:', error)
-      ElMessage.error('WebSocket连接出错' + JSON.stringify(error))
-    }
+      ElMessage.error('WebSocket连接出错')
+    })
+
+    // 连接WebSocket
+    wsManager.connect()
   } catch (error) {
     console.error('创建WebSocket连接失败:', error)
     ElMessage.error('创建WebSocket连接失败')
@@ -420,16 +419,17 @@ const connect = () => {
 }
 
 const disconnect = () => {
-  if (ws) {
-    ws.close()
-    ws = null
+  if (wsManager) {
+    // 清理处理器
+    wsManager.removeMessageHandler(handleMessage)
+    wsManager.removeConnectionHandler(() => {})
+    wsManager.removeErrorHandler(() => {})
+
+    // 断开连接
+    wsManager.disconnect()
+    wsManager = null
   }
   isConnected.value = false
-  stopHeartbeat()
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer)
-    reconnectTimer = null
-  }
   ElMessage.info('WebSocket连接已断开')
 }
 
@@ -442,7 +442,7 @@ const toggleConnection = () => {
 }
 
 const subscribeToLogs = () => {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return
+  if (!wsManager || !wsManager.isConnected) return
 
   // 如果没有选择任何模块，或者没有可用模块，则订阅所有（发送空数组或不包含modules字段）
   const subscription: any = {
@@ -459,7 +459,7 @@ const subscribeToLogs = () => {
   }
   // 如果selectedModules为空或等于availableModules，则表示订阅所有，不包含modules字段
 
-  ws.send(JSON.stringify(subscription))
+  wsManager.sendMessage(subscription)
 }
 
 // 筛选器事件处理
@@ -614,25 +614,7 @@ const handleMessage = (data: WebSocketMessage) => {
   }
 }
 
-const startHeartbeat = () => {
-  heartbeatTimer = window.setInterval(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(
-        JSON.stringify({
-          type: 'ping',
-          timestamp: Date.now(),
-        }),
-      )
-    }
-  }, 30000) // 30秒心跳
-}
-
-const stopHeartbeat = () => {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer)
-    heartbeatTimer = null
-  }
-}
+// 心跳包已统一到WebSocket管理器中，不需要单独实现
 
 const scheduleReconnect = () => {
   // 移除自动重连功能，保持手动连接模式

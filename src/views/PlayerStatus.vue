@@ -281,18 +281,71 @@ import {
   CircleClose,
 } from '@element-plus/icons-vue'
 import {
-  gameWSManagers,
-  gameData,
+  getWebSocketManager,
   connectPlayerWS,
   disconnectPlayerWS,
   subscribePlayerWS,
-} from '../services/gameWebSocket'
+} from '../services/websocket'
+import { reactive } from 'vue'
+
+// 装备物品类型定义
+interface EquipmentItem {
+  display_name: string
+  count: number
+  damage: number
+  max_damage: number
+}
+
+// 背包物品类型定义
+interface InventoryItem {
+  slot: number
+  display_name: string
+  count: number
+  damage: number
+  max_damage: number
+}
+
+// 本地玩家数据存储
+const playerDataStore = reactive({
+  name: '',
+  health: 0,
+  max_health: 0,
+  food: 0,
+  max_food: 0,
+  experience: 0,
+  level: 0,
+  gamemode: '',
+  position: {
+    x: 0,
+    y: 0,
+    z: 0,
+    yaw: 0,
+    pitch: 0,
+    on_ground: true,
+  },
+  equipment: {
+    main_hand: null as EquipmentItem | null,
+    helmet: null as EquipmentItem | null,
+    chestplate: null as EquipmentItem | null,
+    leggings: null as EquipmentItem | null,
+    boots: null as EquipmentItem | null,
+  },
+  inventory: {
+    occupied_slots: 0,
+    total_slots: 0,
+    empty_slots: 0,
+    items: [] as InventoryItem[],
+  },
+})
+
+// 玩家数据计算属性
+const playerData = computed(() => playerDataStore)
+
+// WebSocket管理器
+const playerWSManager = getWebSocketManager('PLAYER')
 
 // 连接状态
-const isConnected = computed(() => gameWSManagers.player.isConnected)
-
-// 玩家数据
-const playerData = computed(() => gameData.player)
+const isConnected = computed(() => playerWSManager.isConnected)
 
 // 连接状态显示
 const connectionStatus = computed(() => {
@@ -325,14 +378,14 @@ const disconnect = () => {
 
 // 获取生命值百分比
 const getHealthPercentage = () => {
-  if (!playerData.value.health || !playerData.value.max_health) return 0
-  return (playerData.value.health / playerData.value.max_health) * 100
+  if (!playerDataStore.health || !playerDataStore.max_health) return 0
+  return (playerDataStore.health / playerDataStore.max_health) * 100
 }
 
 // 获取饥饿值百分比
 const getFoodPercentage = () => {
-  if (!playerData.value.food || !playerData.value.max_food) return 0
-  return (playerData.value.food / playerData.value.max_food) * 100
+  if (!playerDataStore.food || !playerDataStore.max_food) return 0
+  return (playerDataStore.food / playerDataStore.max_food) * 100
 }
 
 // 获取生命值颜色
@@ -365,6 +418,16 @@ const getDurabilityColor = (item: any) => {
   return '#F56C6C'
 }
 
+// 消息处理器
+const handlePlayerMessage = (message: any) => {
+  if (message.type === 'player_update') {
+    // 更新玩家数据
+    Object.assign(playerDataStore, message.data)
+  } else if (message.type === 'pong') {
+    console.log('[PlayerStatus] Heartbeat received')
+  }
+}
+
 // 连接状态变化处理
 const handleConnectionChange = (connected: boolean) => {
   if (connected) {
@@ -377,13 +440,17 @@ const handleConnectionChange = (connected: boolean) => {
 
 // 组件挂载和卸载
 onMounted(() => {
+  // 添加消息处理器
+  playerWSManager.addMessageHandler(handlePlayerMessage)
   // 添加连接状态监听器
-  gameWSManagers.player.addConnectionHandler(handleConnectionChange)
+  playerWSManager.addConnectionHandler(handleConnectionChange)
 })
 
 onUnmounted(() => {
+  // 移除消息处理器
+  playerWSManager.removeMessageHandler(handlePlayerMessage)
   // 移除连接状态监听器
-  gameWSManagers.player.removeConnectionHandler(handleConnectionChange)
+  playerWSManager.removeConnectionHandler(handleConnectionChange)
   // 断开连接
   disconnectPlayerWS()
 })

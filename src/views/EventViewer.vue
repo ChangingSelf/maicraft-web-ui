@@ -169,6 +169,7 @@ declare global {
 }
 import { ElMessage } from 'element-plus'
 import { List, Setting, Search } from '@element-plus/icons-vue'
+import type { WebSocketMessage, WSErrorMessage } from '../types'
 
 // 类型定义
 interface EventItem {

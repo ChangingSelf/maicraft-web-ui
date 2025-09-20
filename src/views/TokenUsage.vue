@@ -244,6 +244,7 @@ import {
   User,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { createWebSocketManager } from '@/services/websocket'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -253,7 +254,12 @@ defineOptions({
 // WebSocket连接状态
 const isConnected = ref(false)
 const loading = ref(false)
-const wsConnection = ref<WebSocket | null>(null)
+const wsManager = ref<any>(null)
+
+// 处理器引用（用于清理）
+let currentMessageHandler: ((message: any) => void) | null = null
+let currentConnectionHandler: ((connected: boolean) => void) | null = null
+let currentErrorHandler: ((error: Event) => void) | null = null
 
 // 监控参数
 const updateInterval = ref(5000) // 默认5秒更新
@@ -289,40 +295,46 @@ const formatTime = (timestamp: number | undefined) => {
 
 // 建立WebSocket连接
 const connectWebSocket = () => {
-  if (wsConnection.value && wsConnection.value.readyState === WebSocket.OPEN) {
+  if (wsManager.value && wsManager.value.isConnected) {
     return
   }
 
   try {
     const wsUrl = `ws://localhost:20914/ws/token-usage`
-    wsConnection.value = new WebSocket(wsUrl)
+    wsManager.value = createWebSocketManager(wsUrl, {
+      heartbeatInterval: 30000,
+      reconnectInterval: 3000,
+      maxReconnectAttempts: 3,
+    })
 
-    wsConnection.value.onopen = () => {
-      isConnected.value = true
-      ElMessage.success('Token监控连接成功')
-
-      // 发送订阅消息
-      sendSubscribeMessage()
+    // 添加消息处理器
+    currentMessageHandler = (message: any) => {
+      handleWebSocketMessage(message)
     }
+    wsManager.value.addMessageHandler(currentMessageHandler)
 
-    wsConnection.value.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        handleWebSocketMessage(data)
-      } catch (error) {
-        console.error('解析WebSocket消息失败:', error)
+    // 添加连接状态处理器
+    currentConnectionHandler = (connected: boolean) => {
+      isConnected.value = connected
+      if (connected) {
+        ElMessage.success('Token监控连接成功')
+        // 发送订阅消息
+        sendSubscribeMessage()
+      } else {
+        ElMessage.warning('Token监控连接已断开')
       }
     }
+    wsManager.value.addConnectionHandler(currentConnectionHandler)
 
-    wsConnection.value.onclose = () => {
-      isConnected.value = false
-      ElMessage.warning('Token监控连接已断开')
-    }
-
-    wsConnection.value.onerror = (error) => {
+    // 添加错误处理器
+    currentErrorHandler = (error: Event) => {
       console.error('WebSocket连接错误:', error)
       ElMessage.error('Token监控连接失败')
     }
+    wsManager.value.addErrorHandler(currentErrorHandler)
+
+    // 连接WebSocket
+    wsManager.value.connect()
   } catch (error) {
     console.error('创建WebSocket连接失败:', error)
     ElMessage.error('无法建立Token监控连接')
@@ -331,16 +343,31 @@ const connectWebSocket = () => {
 
 // 断开WebSocket连接
 const disconnectWebSocket = () => {
-  if (wsConnection.value) {
-    wsConnection.value.close()
-    wsConnection.value = null
+  if (wsManager.value) {
+    // 清理处理器
+    if (currentMessageHandler) {
+      wsManager.value.removeMessageHandler(currentMessageHandler)
+      currentMessageHandler = null
+    }
+    if (currentConnectionHandler) {
+      wsManager.value.removeConnectionHandler(currentConnectionHandler)
+      currentConnectionHandler = null
+    }
+    if (currentErrorHandler) {
+      wsManager.value.removeErrorHandler(currentErrorHandler)
+      currentErrorHandler = null
+    }
+
+    // 断开连接
+    wsManager.value.disconnect()
+    wsManager.value = null
     isConnected.value = false
   }
 }
 
 // 发送订阅消息
 const sendSubscribeMessage = () => {
-  if (!wsConnection.value || wsConnection.value.readyState !== WebSocket.OPEN) {
+  if (!wsManager.value || !wsManager.value.isConnected) {
     return
   }
 
@@ -350,12 +377,12 @@ const sendSubscribeMessage = () => {
     model_filter: modelFilter.value || undefined,
   }
 
-  wsConnection.value.send(JSON.stringify(subscribeData))
+  wsManager.value.sendMessage(subscribeData)
 }
 
 // 获取当前使用量
 const getCurrentUsage = () => {
-  if (!wsConnection.value || wsConnection.value.readyState !== WebSocket.OPEN) {
+  if (!wsManager.value || !wsManager.value.isConnected) {
     return
   }
 
@@ -363,7 +390,7 @@ const getCurrentUsage = () => {
     type: 'get_usage',
   }
 
-  wsConnection.value.send(JSON.stringify(requestData))
+  wsManager.value.sendMessage(requestData)
 }
 
 // 处理WebSocket消息

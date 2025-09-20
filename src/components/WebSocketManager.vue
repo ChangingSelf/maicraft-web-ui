@@ -19,6 +19,7 @@
 import { ref, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import { createWebSocketManager } from '@/services/websocket'
 
 // 类型定义
 interface WebSocketConfig {
@@ -58,10 +59,8 @@ const emit = defineEmits<{
 const isConnected = ref(false)
 const reconnectAttempts = ref(0)
 
-// WebSocket实例
-let ws: WebSocket | null = null
-let heartbeatTimer: number | null = null
-let reconnectTimer: number | null = null
+// WebSocket管理器实例
+let wsManager: any = null
 
 // 默认配置
 const defaultConfig: Required<WebSocketConfig> = {
@@ -75,41 +74,51 @@ const finalConfig = { ...defaultConfig, ...props.config }
 
 // WebSocket管理方法
 const connect = () => {
-  if (ws && ws.readyState === WebSocket.OPEN) {
+  if (wsManager && wsManager.isConnected) {
     return
   }
 
   try {
-    ws = new WebSocket(finalConfig.url)
+    // 创建WebSocket管理器
+    wsManager = createWebSocketManager(finalConfig.url, {
+      heartbeatInterval: finalConfig.heartbeatInterval,
+      reconnectInterval: finalConfig.reconnectInterval,
+      maxReconnectAttempts: finalConfig.maxReconnectAttempts,
+    })
 
-    ws.onopen = () => {
-      isConnected.value = true
-      reconnectAttempts.value = 0
-      ElMessage.success('WebSocket连接成功')
-      emit('statusChange', true)
-      startHeartbeat()
+    // 添加消息处理器
+    const messageHandler = (message: WebSocketMessage) => {
+      emit('message', message)
     }
+    wsManager.addMessageHandler(messageHandler)
 
-    ws.onmessage = (event) => {
-      try {
-        const data: WebSocketMessage = JSON.parse(event.data)
-        emit('message', data)
-      } catch (error) {
-        console.error('解析WebSocket消息失败:', error)
+    // 添加连接状态处理器
+    const connectionHandler = (connected: boolean) => {
+      isConnected.value = connected
+      if (connected) {
+        reconnectAttempts.value = 0
+        ElMessage.success('WebSocket连接成功')
+      } else {
+        ElMessage.warning('WebSocket连接断开')
       }
+      emit('statusChange', connected)
     }
+    wsManager.addConnectionHandler(connectionHandler)
 
-    ws.onclose = () => {
-      isConnected.value = false
-      ElMessage.warning('WebSocket连接断开')
-      emit('statusChange', false)
-      stopHeartbeat()
-    }
-
-    ws.onerror = (error) => {
+    // 添加错误处理器
+    const errorHandler = (error: Event) => {
       console.error('WebSocket错误:', error)
       emit('error', error)
     }
+    wsManager.addErrorHandler(errorHandler)
+
+    // 连接WebSocket
+    wsManager.connect()
+
+    // 保存处理器引用以便后续清理
+    wsManager._messageHandler = messageHandler
+    wsManager._connectionHandler = connectionHandler
+    wsManager._errorHandler = errorHandler
   } catch (error) {
     console.error('创建WebSocket连接失败:', error)
     ElMessage.error('创建WebSocket连接失败')
@@ -117,52 +126,36 @@ const connect = () => {
 }
 
 const disconnect = () => {
-  if (ws) {
-    ws.close()
-    ws = null
+  if (wsManager) {
+    // 清理处理器
+    if (wsManager._messageHandler) {
+      wsManager.removeMessageHandler(wsManager._messageHandler)
+    }
+    if (wsManager._connectionHandler) {
+      wsManager.removeConnectionHandler(wsManager._connectionHandler)
+    }
+    if (wsManager._errorHandler) {
+      wsManager.removeErrorHandler(wsManager._errorHandler)
+    }
+
+    // 断开连接
+    wsManager.disconnect()
+    wsManager = null
   }
   isConnected.value = false
-  stopHeartbeat()
-  if (reconnectTimer) {
-    clearTimeout(reconnectTimer)
-    reconnectTimer = null
-  }
   ElMessage.info('WebSocket连接已断开')
 }
 
 const sendMessage = (message: any) => {
-  if (!ws || ws.readyState !== WebSocket.OPEN) {
+  if (!wsManager || !wsManager.isConnected) {
     ElMessage.warning('WebSocket未连接，无法发送消息')
     return false
   }
 
-  try {
-    ws.send(JSON.stringify(message))
-    return true
-  } catch (error) {
-    console.error('发送WebSocket消息失败:', error)
-    ElMessage.error('发送消息失败')
-    return false
-  }
+  return wsManager.sendMessage(message)
 }
 
-const startHeartbeat = () => {
-  heartbeatTimer = window.setInterval(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      sendMessage({
-        type: 'ping',
-        timestamp: Date.now(),
-      })
-    }
-  }, finalConfig.heartbeatInterval)
-}
-
-const stopHeartbeat = () => {
-  if (heartbeatTimer) {
-    clearInterval(heartbeatTimer)
-    heartbeatTimer = null
-  }
-}
+// 心跳包已统一到WebSocket管理器中，不需要单独实现
 
 // 暴露方法给父组件
 defineExpose({
