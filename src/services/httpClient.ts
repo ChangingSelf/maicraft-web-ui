@@ -24,17 +24,18 @@ export class HttpClient {
       throw new Error(`API配置无效: ${validation.errors.join(', ')}`)
     }
 
-    this.baseURL = baseURL || API_CONFIG.http.baseURL
+    const apiConfig = getAPIConfig()
+    this.baseURL = baseURL || apiConfig.http.baseURL
 
     this.defaultConfig = {
       method: 'GET',
-      headers: { ...API_CONFIG.http.headers },
-      timeout: API_CONFIG.http.timeout,
-      retry: API_CONFIG.http.retry,
+      headers: { ...apiConfig.http.headers },
+      timeout: apiConfig.http.timeout,
+      retry: apiConfig.http.retry,
       ...config,
     }
 
-    if (API_CONFIG.http.debug) {
+    if (apiConfig.http.debug) {
       console.log('🚀 HTTP客户端初始化完成:', {
         baseURL: this.baseURL,
         defaultConfig: this.defaultConfig,
@@ -189,9 +190,10 @@ export class HttpClient {
     let lastError: any = null
     const maxRetries = config.retry?.maxRetries || 0
 
+    const apiConfig = getAPIConfig()
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        if (API_CONFIG.http.debug) {
+        if (apiConfig.http.debug) {
           console.log(`📡 ${config.method} ${url} (尝试 ${attempt + 1}/${maxRetries + 1})`)
         }
 
@@ -201,7 +203,7 @@ export class HttpClient {
         // 处理响应
         const result = await this.handleResponse<T>(response, config)
 
-        if (API_CONFIG.http.debug) {
+        if (apiConfig.http.debug) {
           console.log(`✅ ${config.method} ${url} - ${response.status}`)
         }
 
@@ -209,7 +211,7 @@ export class HttpClient {
       } catch (error) {
         lastError = error
 
-        if (API_CONFIG.http.debug) {
+        if (apiConfig.http.debug) {
           console.warn(`❌ ${config.method} ${url} (尝试 ${attempt + 1}/${maxRetries + 1}):`, error)
         }
 
@@ -472,8 +474,23 @@ export class HttpClient {
   }
 }
 
-// 导出单例实例
-export const httpClient = new HttpClient()
+// 懒初始化单例实例
+let _httpClient: HttpClient | null = null
+
+export const getHttpClient = (): HttpClient => {
+  if (!_httpClient) {
+    _httpClient = new HttpClient()
+  }
+  return _httpClient
+}
+
+// 为向后兼容提供 httpClient getter
+export const httpClient = new Proxy({} as HttpClient, {
+  get(target, prop) {
+    const client = getHttpClient()
+    return (client as any)[prop]
+  },
+})
 
 // 便捷的全局请求方法
 export const api = {

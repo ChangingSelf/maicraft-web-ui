@@ -1,28 +1,62 @@
-import { reactive } from 'vue'
+import { reactive, computed } from 'vue'
+import { useSettingsStore } from '../stores/settings'
 
-// WebSocket端点配置 - 全局统一管理
+// WebSocket端点配置 - 懒初始化
+let _wsEndpoints: ReturnType<typeof computed<Record<WSEndpointType, string>>> | null = null
+
+const getWsEndpoints = () => {
+  if (!_wsEndpoints) {
+    const settingsStore = useSettingsStore()
+    _wsEndpoints = computed(() => ({
+      // 游戏相关端点
+      PLAYER: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/game/player`,
+      WORLD: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/game/world`,
+      MARKER: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/game/marker`,
+
+      // 日志和监控端点
+      LOGS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/logs`,
+      LOGS_ALT: `ws://localhost:8000/ws/logs`, // 备用端点，保持不变
+
+      // 监控和统计端点
+      TOKEN_USAGE: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/token-usage`,
+      EVENTS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/events`,
+      TASK_MANAGER: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/task-manager`,
+
+      // 通用端点
+      GENERAL: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws`,
+      STATUS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/status`,
+    }))
+  }
+  return _wsEndpoints
+}
+
+// 导出WebSocket端点配置（懒初始化）
+export const getWsEndpointsValue = (): Record<WSEndpointType, string> => {
+  if (!_wsEndpoints) {
+    _wsEndpoints = getWsEndpoints()
+  }
+  return _wsEndpoints.value
+}
+
+// 为向后兼容提供 computed 属性
 export const WS_ENDPOINTS = {
-  // 游戏相关端点
-  PLAYER: 'ws://localhost:20914/ws/game/player',
-  WORLD: 'ws://localhost:20914/ws/game/world',
-  MARKER: 'ws://localhost:20914/ws/game/marker',
-
-  // 日志和监控端点
-  LOGS: 'ws://localhost:20914/ws/logs',
-  LOGS_ALT: 'ws://localhost:8000/ws/logs', // 备用端点
-
-  // 监控和统计端点
-  TOKEN_USAGE: 'ws://localhost:20914/ws/token-usage',
-  EVENTS: 'ws://localhost:20914/ws/events',
-  TASK_MANAGER: 'ws://localhost:20914/ws/task-manager',
-
-  // 通用端点
-  GENERAL: 'ws://localhost:20914/ws',
-  STATUS: 'ws://localhost:20914/ws/status',
-} as const
+  get value() {
+    return getWsEndpointsValue()
+  },
+}
 
 // WebSocket端点类型
-export type WSEndpointType = keyof typeof WS_ENDPOINTS
+export type WSEndpointType =
+  | 'PLAYER'
+  | 'WORLD'
+  | 'MARKER'
+  | 'LOGS'
+  | 'LOGS_ALT'
+  | 'TOKEN_USAGE'
+  | 'EVENTS'
+  | 'TASK_MANAGER'
+  | 'GENERAL'
+  | 'STATUS'
 
 // WebSocket连接状态
 export interface WSConnection {
@@ -424,7 +458,7 @@ export const createWebSocketManager = (
 }
 
 // 日志WebSocket专用管理器
-export const createLogsWebSocketManager = (url: string = WS_ENDPOINTS.LOGS) => {
+export const createLogsWebSocketManager = (url: string = getWsEndpointsValue().LOGS) => {
   return createWebSocketManager(url, {
     heartbeatInterval: 10000, // 10秒 - 匹配服务器清理间隔
     reconnectInterval: 5000,
@@ -455,7 +489,7 @@ class GlobalWebSocketRegistry {
     const managerId = type
 
     if (!this.managers.has(managerId)) {
-      const endpoint = WS_ENDPOINTS[type]
+      const endpoint = getWsEndpointsValue()[type]
       const config = WS_MANAGER_CONFIGS[type]
 
       const wsConfig: WSConfig = {
