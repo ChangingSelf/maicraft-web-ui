@@ -1,17 +1,25 @@
 {
-  "current": "0.15.2",
+  "current": "0.15.3",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
   "buildDate": "2025-09-20",
-  "buildTime": "11:15:29",
+  "buildTime": "11:19:30",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/your-repo/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
     "lastUpdated": "2025-09-20",
-    "totalVersions": 24,
+    "totalVersions": 25,
     "versions": [
+      {
+        "version": "0.15.3",
+        "date": "2025-09-20",
+        "type": "patch",
+        "changelog": [
+          "版本 0.15.3 发布"
+        ]
+      },
       {
         "version": "0.15.2",
         "date": "2025-09-20",
