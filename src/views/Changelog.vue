@@ -132,7 +132,6 @@
               </div>
             </div>
           </div>
-          </div>
         </div>
 
         <div v-else class="no-content">
