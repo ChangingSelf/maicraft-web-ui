@@ -8,6 +8,8 @@ import Settings from '../views/Settings.vue'
 import WorldInfo from '../views/WorldInfo.vue'
 import PlayerStatus from '../views/PlayerStatus.vue'
 import Changelog from '../views/Changelog.vue'
+import TokenUsage from '../views/TokenUsage.vue'
+import TaskManager from '../views/TaskManager.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -51,6 +53,24 @@ const router = createRouter({
       component: MCPTools,
       meta: {
         title: 'MCP 工具管理',
+      },
+    },
+    // Token 使用量监控
+    {
+      path: '/token-usage',
+      name: 'token-usage',
+      component: TokenUsage,
+      meta: {
+        title: 'Token 使用量监控',
+      },
+    },
+    // 任务管理
+    {
+      path: '/task-manager',
+      name: 'task-manager',
+      component: TaskManager,
+      meta: {
+        title: '任务管理',
       },
     },
     // 设置页面（占位）

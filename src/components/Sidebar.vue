@@ -68,6 +68,30 @@
           </template>
         </el-menu-item>
 
+        <!-- Token 使用量监控 -->
+        <el-menu-item index="token-usage">
+          <el-icon><Histogram /></el-icon>
+          <template #title>
+            <span>Token 监控</span>
+          </template>
+        </el-menu-item>
+
+        <!-- 任务管理 -->
+        <el-menu-item index="task-manager">
+          <el-icon><List /></el-icon>
+          <template #title>
+            <span>任务管理</span>
+          </template>
+        </el-menu-item>
+
+        <!-- 动作执行器 -->
+        <el-menu-item index="action-executor">
+          <el-icon><Setting /></el-icon>
+          <template #title>
+            <span>动作执行器</span>
+          </template>
+        </el-menu-item>
+
         <!-- 设置 -->
         <el-menu-item index="settings">
           <el-icon><Setting /></el-icon>
@@ -141,6 +165,9 @@ const activeIndex = computed(() => {
   if (path === '/logs' || path === '/mcp-logs') return 'logs' // 用于展开子菜单
   if (path === '/events') return 'events'
   if (path === '/mcp-tools') return 'mcp-tools'
+  if (path === '/token-usage') return 'token-usage'
+  if (path === '/task-manager') return 'task-manager'
+  if (path === '/action-executor') return 'action-executor'
   if (path.startsWith('/server')) return 'server'
   if (path.startsWith('/players')) return 'players'
   if (path.startsWith('/monitoring')) return 'monitoring'
@@ -225,6 +252,15 @@ const handleSelect = (index: string) => {
       break
     case 'mcp-tools':
       router.push('/mcp-tools')
+      break
+    case 'token-usage':
+      router.push('/token-usage')
+      break
+    case 'task-manager':
+      router.push('/task-manager')
+      break
+    case 'action-executor':
+      router.push('/action-executor')
       break
     case 'settings':
       router.push('/settings')
