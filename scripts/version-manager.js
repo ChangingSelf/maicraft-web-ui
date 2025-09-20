@@ -103,9 +103,91 @@ function incrementVersion(version, type) {
   }
 }
 
+// 交互式收集变更信息
+async function collectChangesInteractively() {
+  const readline = await import('readline')
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  })
+
+  return new Promise((resolve) => {
+    const changes = {}
+    const summaries = []
+
+    function askForChange() {
+      console.log('\n📝 添加变更信息')
+      console.log('支持的类型: feat, fix, docs, style, refactor, perf, test, chore, ci, build')
+      console.log('输入格式: <type> <message> 例如: fix 修复登录问题')
+      console.log('输入 "done" 完成添加, "cancel" 取消')
+
+      rl.question('> ', (input) => {
+        const trimmed = input.trim()
+
+        if (trimmed === 'done') {
+          rl.close()
+          resolve({ changes, summaries })
+          return
+        }
+
+        if (trimmed === 'cancel') {
+          rl.close()
+          resolve({ changes: {}, summaries: [] })
+          return
+        }
+
+        const match = trimmed.match(/^(\w+)\s+(.+)$/)
+        if (!match) {
+          log(colors.yellow, '❌ 格式错误，请使用: <type> <message>')
+          askForChange()
+          return
+        }
+
+        const [_, changeType, changeMessage] = match
+
+        // 验证类型
+        const validTypes = [
+          'feat',
+          'fix',
+          'docs',
+          'style',
+          'refactor',
+          'perf',
+          'test',
+          'chore',
+          'ci',
+          'build',
+        ]
+        if (!validTypes.includes(changeType)) {
+          log(colors.yellow, `❌ 无效的类型: ${changeType}`)
+          log(colors.yellow, `支持的类型: ${validTypes.join(', ')}`)
+          askForChange()
+          return
+        }
+
+        // 添加到changes对象
+        if (!changes[changeType]) {
+          changes[changeType] = []
+        }
+        changes[changeType].push(changeMessage)
+
+        // 添加到summaries
+        const typeTitle = getCommitTypeTitle(changeType).split(' / ')[0]
+        summaries.push(`${typeTitle} - ${changeMessage}`)
+
+        log(colors.green, `✅ 已添加: ${changeType} - ${changeMessage}`)
+
+        askForChange()
+      })
+    }
+
+    askForChange()
+  })
+}
+
 // 更新版本的主要函数
-function updateVersion(type = 'patch', options = {}) {
-  const { message = '', skipChangelog = false, skipGit = false } = options
+async function updateVersion(type = 'patch', options = {}) {
+  const { messages = [], skipChangelog = false, skipGit = false, commitTypes = [] } = options
 
   log(colors.cyan, `开始 ${type} 版本更新...`)
 
@@ -130,11 +212,51 @@ function updateVersion(type = 'patch', options = {}) {
   config.changelog.lastUpdated = getCurrentDate()
 
   // 添加新版本到版本历史
-  const newVersionEntry = {
-    version: newVersion,
-    date: getCurrentDate(),
-    type: type,
-    changelog: message ? [message] : [`版本 ${newVersion} 发布`],
+  let newVersionEntry
+
+  // 收集变更信息
+  let changes = {}
+  let summaries = []
+
+  // 处理命令行提供的变更
+  if (messages.length > 0) {
+    for (let i = 0; i < messages.length; i++) {
+      const message = messages[i]
+      const commitType = commitTypes[i] || 'chore' // 默认类型
+
+      if (!changes[commitType]) {
+        changes[commitType] = []
+      }
+      changes[commitType].push(message)
+      summaries.push(`${getCommitTypeTitle(commitType).split(' / ')[0]} - ${message}`)
+    }
+  } else {
+    // 没有提供变更信息，进入交互模式
+    log(colors.blue, '\n🔄 没有检测到变更信息，进入交互模式...')
+    const result = await collectChangesInteractively()
+    changes = result.changes
+    summaries = result.summaries
+
+    if (Object.keys(changes).length === 0) {
+      log(colors.yellow, '⚠️  没有添加任何变更，使用默认消息')
+      newVersionEntry = {
+        version: newVersion,
+        date: getCurrentDate(),
+        type: type,
+        changelog: [`版本 ${newVersion} 发布`],
+      }
+    }
+  }
+
+  // 如果有收集到changes，创建结构化版本条目
+  if (Object.keys(changes).length > 0 && !newVersionEntry) {
+    newVersionEntry = {
+      version: newVersion,
+      date: getCurrentDate(),
+      type: type,
+      changes: changes,
+      summary: summaries.join('; '),
+    }
   }
 
   config.changelog.versions.unshift(newVersionEntry)
@@ -168,6 +290,13 @@ function updateChangelog(versionEntry) {
   const changelogPath = path.join(__dirname, '..', 'CHANGELOG.md')
 
   try {
+    // 检查 CHANGELOG.md 文件是否存在
+    if (!fs.existsSync(changelogPath)) {
+      log(colors.yellow, 'CHANGELOG.md 文件不存在，跳过更新')
+      log(colors.yellow, '提示：如果需要生成 CHANGELOG.md，可以手动创建或从备份恢复')
+      return
+    }
+
     // 读取现有内容
     let changelogContent = fs.readFileSync(changelogPath, 'utf8')
 
@@ -284,12 +413,37 @@ function showHelp() {
   log(colors.white, '  help           显示帮助信息')
   log(colors.white, '')
   log(colors.white, '选项:')
-  log(colors.white, '  --message, -m  指定更新说明')
+  log(colors.white, '  --message, -m  指定更新说明 (可多次使用)')
+  log(
+    colors.white,
+    '  --type, -t     指定更新类型 (feat, fix, docs, style, refactor, perf, test, chore, ci, build，可多次使用)',
+  )
   log(colors.white, '  --skip-changelog  跳过 CHANGELOG.md 更新')
   log(colors.white, '  --skip-git       跳过 Git 操作')
   log(colors.white, '')
+  log(colors.white, '更新类型:')
+  log(colors.white, '  feat     ✨ 新功能 / New Features')
+  log(colors.white, '  fix      🐛 修复 / Bug Fixes')
+  log(colors.white, '  docs     📚 文档 / Documentation')
+  log(colors.white, '  style    🎨 样式 / Style')
+  log(colors.white, '  refactor 🔧 重构 / Refactoring')
+  log(colors.white, '  perf     ⚡ 性能 / Performance')
+  log(colors.white, '  test     🧪 测试 / Tests')
+  log(colors.white, '  chore    🔨 构建 / Build')
+  log(colors.white, '  ci       🔄 CI / CI')
+  log(colors.white, '  build    🏗️ 构建 / Build')
+  log(colors.white, '')
   log(colors.white, '示例:')
   log(colors.white, '  node scripts/version-manager.js patch -m "修复登录问题"')
+  log(
+    colors.white,
+    '  node scripts/version-manager.js patch -t fix -m "修复登录问题" -t feat -m "添加用户注册"',
+  )
+  log(
+    colors.white,
+    '  node scripts/version-manager.js patch -t fix -m "修复问题1" -t fix -m "修复问题2"',
+  )
+  log(colors.white, '  node scripts/version-manager.js patch  # 进入交互模式，可添加多个变更')
   log(colors.white, '  node scripts/version-manager.js minor --skip-git')
 }
 
@@ -308,18 +462,32 @@ function main() {
   }
 
   // 解析选项
-  const options = {}
+  const options = {
+    messages: [],
+    commitTypes: [],
+    skipChangelog: false,
+    skipGit: false,
+  }
   const optionArgs = args.slice(1)
 
   for (let i = 0; i < optionArgs.length; i++) {
     const arg = optionArgs[i]
     if (arg === '--message' || arg === '-m') {
-      options.message = optionArgs[i + 1]
-      i++
+      if (i + 1 < optionArgs.length) {
+        options.messages.push(optionArgs[i + 1])
+        i++
+      }
+    } else if (arg === '--type' || arg === '-t') {
+      if (i + 1 < optionArgs.length) {
+        options.commitTypes.push(optionArgs[i + 1])
+        i++
+      }
     } else if (arg === '--skip-changelog') {
       options.skipChangelog = true
     } else if (arg === '--skip-git') {
       options.skipGit = true
+    } else {
+      log(colors.yellow, `警告: 未知参数 '${arg}' 将被忽略`)
     }
   }
 
@@ -327,7 +495,10 @@ function main() {
     case 'patch':
     case 'minor':
     case 'major':
-      updateVersion(command, options)
+      updateVersion(command, options).catch((error) => {
+        log(colors.red, `版本更新失败: ${error.message}`)
+        process.exit(1)
+      })
       break
     case 'info':
       showVersionInfo()
