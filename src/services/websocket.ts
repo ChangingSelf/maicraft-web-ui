@@ -1,4 +1,4 @@
-import { reactive, computed } from 'vue'
+import { reactive, computed, type ComputedRef } from 'vue'
 import { useSettingsStore } from '../stores/settings'
 
 // WebSocket端点类型
@@ -15,7 +15,7 @@ export type WSEndpointType =
   | 'STATUS'
 
 // WebSocket端点配置 - 懒初始化
-let _wsEndpoints: ReturnType<typeof computed<Record<WSEndpointType, string>>> | null = null
+let _wsEndpoints: ComputedRef<Record<WSEndpointType, string>> | null = null
 
 const getWsEndpoints = () => {
   if (!_wsEndpoints) {
@@ -28,7 +28,7 @@ const getWsEndpoints = () => {
 
       // 日志和监控端点
       LOGS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/logs`,
-      LOGS_ALT: `ws://localhost:8000/ws/logs`, // 备用端点，保持不变
+      LOGS_ALT: `ws://localhost:20915/ws/mcp-logs`, // MCP Server 日志端点
 
       // 监控和统计端点
       TOKEN_USAGE: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/token-usage`,
@@ -48,7 +48,7 @@ export const getWsEndpointsValue = (): Record<WSEndpointType, string> => {
   if (!_wsEndpoints) {
     _wsEndpoints = getWsEndpoints()
   }
-  return _wsEndpoints.value
+  return _wsEndpoints!.value
 }
 
 // 为向后兼容提供 computed 属性

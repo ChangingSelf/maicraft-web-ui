@@ -144,38 +144,26 @@ import {
   subscribeWorldWS,
 } from '../services/websocket'
 import { reactive } from 'vue'
+import { useWebSocketData } from '../stores/websocketData'
+import {
+  getGlobalConnectionStatus,
+  connectSingleEndpoint,
+  disconnectSingleEndpoint,
+} from '../services/globalWebSocketService'
 
-// 本地世界数据存储
-const worldDataStore = reactive({
-  time: {
-    time_of_day: 0,
-    formatted_time: '',
-    day_count: 0,
-  },
-  weather: {
-    weather: '',
-    formatted_weather: '',
-    duration: 0,
-  },
-  location: {
-    dimension: '',
-    biome: '',
-    light_level: 0,
-  },
-  nearby_blocks: [],
-  nearby_entities: [],
-})
+// 使用全局WebSocket数据存储
+const { worldData } = useWebSocketData()
+const globalConnectionStatus = getGlobalConnectionStatus()
 
 // WebSocket管理器
 const worldWSManager = getWebSocketManager('WORLD')
 
-// 连接状态
-const isConnected = computed(() => worldWSManager.isConnected)
+// 连接状态（使用全局状态）
+const isConnected = computed(() => globalConnectionStatus.connectionStatus.WORLD || false)
 
-// 世界数据
-const worldData = computed(() => worldDataStore)
-const nearbyBlocks = computed(() => worldDataStore.nearby_blocks || [])
-const nearbyEntities = computed(() => worldDataStore.nearby_entities || [])
+// 世界数据计算属性
+const nearbyBlocks = computed(() => worldData.nearby_blocks || [])
+const nearbyEntities = computed(() => worldData.nearby_entities || [])
 
 // 连接状态显示
 const connectionStatus = computed(() => {
@@ -194,16 +182,22 @@ const connectionStatus = computed(() => {
   }
 })
 
-// 连接WebSocket
-const connect = () => {
-  connectWorldWS()
-  ElMessage.success('正在连接世界数据...')
+// 连接WebSocket（使用全局连接管理）
+const connect = async () => {
+  try {
+    await connectSingleEndpoint('WORLD')
+  } catch (error) {
+    console.error('连接失败:', error)
+  }
 }
 
-// 断开WebSocket
+// 断开WebSocket（使用全局连接管理）
 const disconnect = () => {
-  disconnectWorldWS()
-  ElMessage.info('已断开连接')
+  try {
+    disconnectSingleEndpoint('WORLD')
+  } catch (error) {
+    console.error('断开连接失败:', error)
+  }
 }
 
 // 获取健康状态颜色
@@ -214,14 +208,12 @@ const getHealthColor = (health: number, maxHealth: number) => {
   return '#F56C6C'
 }
 
-// 消息处理器
+// 消息处理器（现在数据由全局状态管理，这里只处理心跳）
 const handleWorldMessage = (message: any) => {
-  if (message.type === 'world_update') {
-    // 更新世界数据
-    Object.assign(worldDataStore, message.data)
-  } else if (message.type === 'pong') {
+  if (message.type === 'pong') {
     console.log('[WorldInfo] Heartbeat received')
   }
+  // 世界数据更新现在由全局状态管理处理
 }
 
 // 连接状态变化处理

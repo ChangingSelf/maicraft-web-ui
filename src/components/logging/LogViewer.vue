@@ -65,7 +65,13 @@
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document } from '@element-plus/icons-vue'
-import { createWebSocketManager } from '@/services/websocket'
+import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
+import { useWebSocketData } from '@/stores/websocketData'
+import {
+  getGlobalConnectionStatus,
+  connectSingleEndpoint,
+  disconnectSingleEndpoint,
+} from '@/services/globalWebSocketService'
 import FilterPanel from '@/components/FilterPanel.vue'
 import LogControls from './LogControls.vue'
 import LogStats from './LogStats.vue'
@@ -112,9 +118,27 @@ interface WebSocketMessage {
   errorCode?: string
 }
 
-// 响应式数据
-const isConnected = ref(false)
-const logs = ref<LogEntry[]>([])
+// 使用全局WebSocket数据存储
+const { logs: globalLogs, mcpLogs: globalMcpLogs } = useWebSocketData()
+const globalConnectionStatus = getGlobalConnectionStatus()
+
+// 根据URL确定使用哪种日志数据
+const logs = computed(() => {
+  // 如果是 MCP server 日志查看器
+  if (props.wsUrl.includes('mcp-logs')) {
+    return globalMcpLogs
+  }
+  // 否则是 maicraft 日志
+  return globalLogs
+})
+
+// 根据URL确定连接状态
+const isConnected = computed(() => {
+  if (props.wsUrl.includes('mcp-logs')) {
+    return globalConnectionStatus.connectionStatus.LOGS_ALT || false
+  }
+  return globalConnectionStatus.connectionStatus.LOGS || false
+})
 const selectedLevels = ref<string[]>(['INFO', 'WARNING', 'ERROR'])
 const selectedModules = ref<string[]>([]) // 空数组表示全选所有模块
 const showSettings = ref(false)
@@ -171,7 +195,8 @@ const settings = ref({
 })
 
 // WebSocket管理器实例
-let wsManager: any = null
+// WebSocket管理器（不再需要本地管理器，使用全局管理器）
+// let wsManager: any = null
 
 // 计算属性
 const filteredLogs = computed(() => {
@@ -377,62 +402,30 @@ const truncateMessage = (message: string): string => {
 }
 
 // WebSocket相关方法
-const connect = () => {
-  if (wsManager && wsManager.isConnected) {
-    return
-  }
-
+const connect = async () => {
   try {
-    // 创建WebSocket管理器
-    wsManager = createWebSocketManager(settings.value.wsUrl, {
-      heartbeatInterval: 10000, // 10秒 - 更短的心跳间隔
-      reconnectInterval: 5000,
-      maxReconnectAttempts: 5,
-      enableHeartbeat: true,
-      autoReconnect: true,
-    })
-
-    // 添加消息处理器
-    wsManager.addMessageHandler(handleMessage)
-
-    // 添加连接状态处理器
-    wsManager.addConnectionHandler((connected: boolean) => {
-      isConnected.value = connected
-      if (connected) {
-        ElMessage.success('WebSocket连接成功')
-        subscribeToLogs()
-      } else {
-        ElMessage.warning('WebSocket连接断开')
-      }
-    })
-
-    // 添加错误处理器
-    wsManager.addErrorHandler((error: Event) => {
-      console.error('WebSocket错误:', error)
-      ElMessage.error('WebSocket连接出错')
-    })
-
-    // 连接WebSocket
-    wsManager.connect()
+    if (props.wsUrl.includes('mcp-logs')) {
+      await connectSingleEndpoint('LOGS_ALT')
+    } else {
+      await connectSingleEndpoint('LOGS')
+    }
   } catch (error) {
-    console.error('创建WebSocket连接失败:', error)
-    ElMessage.error('创建WebSocket连接失败')
+    console.error('连接失败:', error)
+    ElMessage.error('连接失败')
   }
 }
 
 const disconnect = () => {
-  if (wsManager) {
-    // 清理处理器
-    wsManager.removeMessageHandler(handleMessage)
-    wsManager.removeConnectionHandler(() => {})
-    wsManager.removeErrorHandler(() => {})
-
-    // 断开连接
-    wsManager.disconnect()
-    wsManager = null
+  try {
+    if (props.wsUrl.includes('mcp-logs')) {
+      disconnectSingleEndpoint('LOGS_ALT')
+    } else {
+      disconnectSingleEndpoint('LOGS')
+    }
+  } catch (error) {
+    console.error('断开连接失败:', error)
+    ElMessage.error('断开连接失败')
   }
-  isConnected.value = false
-  ElMessage.info('WebSocket连接已断开')
 }
 
 const toggleConnection = () => {
@@ -444,24 +437,9 @@ const toggleConnection = () => {
 }
 
 const subscribeToLogs = () => {
-  if (!wsManager || !wsManager.isConnected) return
-
-  // 如果没有选择任何模块，或者没有可用模块，则订阅所有（发送空数组或不包含modules字段）
-  const subscription: any = {
-    type: 'subscribe',
-    levels: selectedLevels.value,
-  }
-
-  // 只有当有选择特定模块时才包含modules字段
-  if (
-    selectedModules.value.length > 0 &&
-    selectedModules.value.length < availableModules.value.length
-  ) {
-    subscription.modules = selectedModules.value
-  }
-  // 如果selectedModules为空或等于availableModules，则表示订阅所有，不包含modules字段
-
-  wsManager.sendMessage(subscription)
+  // 订阅逻辑已经由全局连接管理器处理
+  // 这里可以留空或者添加特定的筛选逻辑
+  console.log('日志订阅已由全局管理器处理')
 }
 
 // 筛选器事件处理

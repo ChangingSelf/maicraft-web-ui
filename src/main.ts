@@ -7,8 +7,13 @@ import App from './App.vue'
 import router from './router'
 
 // 导入全局错误处理器和拦截器
-import globalErrorHandler from './services/errorHandler'
+import globalErrorHandler, { ErrorLevel } from './services/errorHandler'
 import { registerDefaultInterceptors } from './services/interceptors'
+
+// 在开发环境下导入测试工具
+if (import.meta.env.DEV) {
+  import('./utils/testWebSocketData')
+}
 
 const app = createApp(App)
 
@@ -24,7 +29,7 @@ globalErrorHandler.init({
   enableUserNotifications: true,
   enableErrorReporting: false, // 在生产环境中可以启用
   maxErrorsInMemory: 50,
-  logLevel: 'medium',
+  logLevel: ErrorLevel.MEDIUM,
 })
 
 // 添加用户通知回调（集成Element Plus的消息提示）

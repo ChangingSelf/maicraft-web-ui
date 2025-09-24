@@ -98,6 +98,7 @@
             <el-icon><Monitor /></el-icon>
             <span>调试工具</span>
           </template>
+          <el-menu-item index="websocket-monitor">WebSocket 监控</el-menu-item>
           <el-menu-item index="websocket-debugger">WebSocket 调试</el-menu-item>
           <el-menu-item index="heartbeat-test">心跳测试</el-menu-item>
         </el-sub-menu>
@@ -120,10 +121,18 @@
         </div>
       </div>
       <div class="server-status" v-if="!isCollapsed">
-        <div class="status-indicator">
-          <div class="status-dot" :class="{ online: serverOnline }"></div>
-          <span>{{ serverOnline ? '在线' : '离线' }}</span>
-        </div>
+        <el-button
+          class="connection-btn"
+          :type="connectionButtonType"
+          :loading="isConnecting"
+          @click="handleConnectionToggle"
+          size="small"
+        >
+          <div class="status-indicator">
+            <div class="status-dot" :class="{ online: allConnected }"></div>
+            <span>{{ connectionButtonText }}</span>
+          </div>
+        </el-button>
       </div>
     </div>
   </el-aside>
@@ -133,6 +142,12 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getCurrentVersionSync, formatVersion } from '../services/versionService'
+import {
+  connectAllWebSockets,
+  disconnectAllWebSockets,
+  getGlobalConnectionStatus,
+} from '../services/globalWebSocketService'
+import { ElMessage } from 'element-plus'
 import {
   House,
   Monitor,
@@ -155,6 +170,25 @@ const isCollapsed = ref(false)
 const serverOnline = ref(true)
 const isMobile = ref(false)
 const showMobileSidebar = ref(false)
+
+// WebSocket连接状态
+const globalConnectionStatus = getGlobalConnectionStatus()
+const isConnecting = computed(() => globalConnectionStatus.isConnecting)
+const allConnected = computed(() => globalConnectionStatus.allConnected)
+
+// 连接按钮状态
+const connectionButtonType = computed(() => {
+  if (isConnecting.value) return 'primary'
+  return allConnected.value ? 'success' : 'warning'
+})
+
+const connectionButtonText = computed(() => {
+  if (isConnecting.value) return '连接中...'
+  if (allConnected.value) return '全部在线'
+  const connectedCount = globalConnectionStatus.connectionCount
+  const totalCount = globalConnectionStatus.totalEndpoints
+  return `${connectedCount}/${totalCount} 在线`
+})
 
 // 版本信息
 const currentVersion = ref('v1.1.4') // 默认版本
@@ -194,6 +228,7 @@ const activeIndex = computed(() => {
   if (path.startsWith('/monitoring')) return 'monitoring'
   if (path.startsWith('/game-monitoring')) return 'game-monitoring'
   if (path.startsWith('/debug-tools')) return 'debug-tools'
+  if (path === '/websocket-monitor') return 'websocket-monitor'
   if (path === '/websocket-debugger') return 'websocket-debugger'
   if (path === '/heartbeat-test') return 'heartbeat-test'
   if (path === '/settings') return 'settings'
@@ -216,6 +251,22 @@ const toggleCollapse = () => {
 const updateSidebarMargin = () => {
   const margin = isCollapsed.value ? '64px' : '260px'
   document.documentElement.style.setProperty('--sidebar-width', margin)
+}
+
+// WebSocket连接处理
+const handleConnectionToggle = async () => {
+  try {
+    if (allConnected.value) {
+      // 如果全部连接，则断开所有连接
+      disconnectAllWebSockets()
+    } else {
+      // 否则连接所有WebSocket
+      await connectAllWebSockets()
+    }
+  } catch (error) {
+    console.error('WebSocket连接操作失败:', error)
+    ElMessage.error('连接操作失败')
+  }
 }
 
 // 组件挂载时初始化
@@ -286,6 +337,9 @@ const handleSelect = (index: string) => {
       break
     case 'action-executor':
       router.push('/action-executor')
+      break
+    case 'websocket-monitor':
+      router.push('/websocket-monitor')
       break
     case 'websocket-debugger':
       router.push('/websocket-debugger')
@@ -448,12 +502,25 @@ watch(
   gap: 8px;
 }
 
+.connection-btn {
+  width: 100%;
+  padding: 6px 12px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.connection-btn :deep(.el-button__text) {
+  width: 100%;
+}
+
 .status-indicator {
   display: flex;
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #666;
+  color: inherit;
+  width: 100%;
+  justify-content: flex-start;
 }
 
 .status-dot {

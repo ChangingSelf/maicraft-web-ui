@@ -244,7 +244,13 @@ import {
   User,
 } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { createWebSocketManager } from '@/services/websocket'
+import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
+import { useWebSocketData } from '@/stores/websocketData'
+import {
+  getGlobalConnectionStatus,
+  connectSingleEndpoint,
+  disconnectSingleEndpoint,
+} from '@/services/globalWebSocketService'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -252,7 +258,11 @@ defineOptions({
 })
 
 // WebSocket连接状态
-const isConnected = ref(false)
+// 使用全局WebSocket数据存储
+const { tokenUsage: globalTokenUsage } = useWebSocketData()
+const globalConnectionStatus = getGlobalConnectionStatus()
+
+const isConnected = computed(() => globalConnectionStatus.connectionStatus.TOKEN_USAGE || false)
 const loading = ref(false)
 const wsManager = ref<any>(null)
 
@@ -265,14 +275,16 @@ let currentErrorHandler: ((error: Event) => void) | null = null
 const updateInterval = ref(5000) // 默认5秒更新
 const modelFilter = ref('') // 模型过滤器
 
-// 数据存储
-const modelUsages = ref<any[]>([])
-const summary = reactive({
-  total_cost: 0,
-  total_prompt_tokens: 0,
-  total_completion_tokens: 0,
-  total_tokens: 0,
-  model_count: 0,
+// 使用全局状态中的Token使用量数据
+const summary = computed(() => globalTokenUsage)
+
+// 从全局状态获取模型使用详情
+const modelUsages = computed(() => {
+  const models = globalTokenUsage.models || {}
+  return Object.values(models).map((modelData: any) => ({
+    model_name: modelData.model_name,
+    usage: modelData,
+  }))
 })
 
 // UI 状态
@@ -315,15 +327,14 @@ const connectWebSocket = () => {
     }
     wsManager.value.addMessageHandler(currentMessageHandler)
 
-    // 添加连接状态处理器
+    // 连接状态现在由全局管理器处理
     currentConnectionHandler = (connected: boolean) => {
-      isConnected.value = connected
       if (connected) {
-        ElMessage.success('Token监控连接成功')
+        console.log('Token监控连接成功')
         // 发送订阅消息
         sendSubscribeMessage()
       } else {
-        ElMessage.warning('Token监控连接已断开')
+        console.log('Token监控连接已断开')
       }
     }
     wsManager.value.addConnectionHandler(currentConnectionHandler)
@@ -363,7 +374,7 @@ const disconnectWebSocket = () => {
     // 断开连接
     wsManager.value.disconnect()
     wsManager.value = null
-    isConnected.value = false
+    // 连接状态现在由全局管理器处理
   }
 }
 
@@ -409,9 +420,9 @@ const handleWebSocketMessage = (data: any) => {
     return
   }
 
-  // 处理业务消息
+  // 处理业务消息（数据更新现在通过全局状态管理）
   if (data.type === 'token_usage_update') {
-    updateUsageData(data.data)
+    console.log('Token监控：收到使用量更新')
   } else if (data.type === 'error') {
     ElMessage.error(`监控错误: ${data.message}`)
   } else if (data.type === 'welcome') {
@@ -421,47 +432,32 @@ const handleWebSocketMessage = (data: any) => {
   }
 }
 
-// 更新使用量数据
-const updateUsageData = (data: any) => {
-  // 处理批量模型数据格式
-  if (data.models) {
-    // 清空现有数据
-    modelUsages.value = []
+// 数据更新现在通过全局状态管理，不需要本地处理函数
 
-    // 添加新的模型数据
-    Object.values(data.models).forEach((modelData: any) => {
-      if (modelData && typeof modelData === 'object') {
-        modelUsages.value.push({
-          model_name: modelData.model_name,
-          usage: modelData,
-        })
+// 开始监控（使用全局连接管理）
+const startMonitoring = async () => {
+  try {
+    await connectSingleEndpoint('TOKEN_USAGE')
+
+    // 连接成功后，发送获取当前使用量的消息
+    setTimeout(() => {
+      const manager = getWebSocketManager('TOKEN_USAGE')
+      if (manager && manager.isConnected) {
+        manager.sendMessage({ type: 'get_usage' })
       }
-    })
-  }
-  // 处理单个模型数据格式（兼容旧格式）
-  else if (data.model_name && data.usage) {
-    const existingIndex = modelUsages.value.findIndex((m) => m.model_name === data.model_name)
-    if (existingIndex >= 0) {
-      modelUsages.value[existingIndex] = data
-    } else {
-      modelUsages.value.push(data)
-    }
-  }
-
-  // 更新汇总数据
-  if (data.summary) {
-    Object.assign(summary, data.summary)
+    }, 1000) // 延迟1秒确保连接稳定
+  } catch (error) {
+    console.error('Token监控连接失败:', error)
   }
 }
 
-// 开始监控
-const startMonitoring = () => {
-  connectWebSocket()
-}
-
-// 停止监控
+// 停止监控（使用全局连接管理）
 const stopMonitoring = () => {
-  disconnectWebSocket()
+  try {
+    disconnectSingleEndpoint('TOKEN_USAGE')
+  } catch (error) {
+    console.error('Token监控断开失败:', error)
+  }
 }
 
 // 更新监控参数

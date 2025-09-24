@@ -405,6 +405,13 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getTaskService, type Task } from '../services'
+import { useWebSocketData } from '@/stores/websocketData'
+import {
+  getGlobalConnectionStatus,
+  connectSingleEndpoint,
+  disconnectSingleEndpoint,
+} from '@/services/globalWebSocketService'
+import { getWebSocketManager } from '@/services/websocket'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -449,28 +456,37 @@ const taskFormRules = {
   done_criteria: [{ required: true, message: '完成条件不能为空', trigger: 'blur' }],
 }
 
-// 计算属性
+// 计算属性 - 基于全局状态中的任务数据
 const taskStats = computed(() => {
-  const stats = taskService.getTaskStats()
+  const taskList = tasks.value || []
+  const completed = taskList.filter((task) => task.done).length
+  const pending = taskList.filter((task) => !task.done).length
+  const total = taskList.length
+
   return {
-    pending: stats.pending,
+    pending,
     in_progress: 0, // 接口中没有进行中状态，直接设为0
-    completed: stats.completed,
-    total: stats.total,
-    is_all_done: stats.is_done,
-    is_done: stats.is_done,
+    completed,
+    total,
+    is_all_done: total > 0 && completed === total,
+    is_done: total > 0 && completed === total,
     total_time: 0, // 接口中没有总耗时信息
-    goal: stats.goal,
+    goal: '任务管理', // 默认目标
   }
 })
 
-const tasks = computed(() => taskService.state.tasks)
+// 使用全局状态中的任务数据
+const { tasks: globalTasks } = useWebSocketData()
+const tasks = computed(() => globalTasks)
 
-const loading = computed(() => taskService.state.loading)
+const loading = ref(false)
 
-const connectionError = computed(() => taskService.state.error)
+// 不再使用旧的taskService的错误状态
+const connectionError = computed(() => null)
 
-const isConnected = computed(() => taskService.state.isConnected)
+// 使用全局连接状态
+const globalConnectionStatus = getGlobalConnectionStatus()
+const isConnected = computed(() => globalConnectionStatus.connectionStatus.TASK_MANAGER || false)
 
 const filteredTasks = computed(() => {
   if (!statusFilter.value) {
@@ -505,34 +521,32 @@ const connectToTaskService = async () => {
 
   try {
     connecting.value = true
-    await taskService.connect()
-    ElMessage.success('任务服务连接成功')
+    await connectSingleEndpoint('TASK_MANAGER')
 
-    // 连接成功后加载任务数据
-    await loadTasks()
+    // 连接成功后，通过WebSocket发送获取任务列表的消息
+    setTimeout(() => {
+      const manager = getWebSocketManager('TASK_MANAGER')
+      if (manager && manager.isConnected) {
+        manager.sendMessage({ type: 'get_tasks' })
+      }
+    }, 1000) // 延迟1秒确保连接稳定
   } catch (error) {
     console.error('连接任务服务失败:', error)
-
-    // 提供更详细的错误信息
-    const errorMessage = connectionError.value || '连接任务服务失败'
-    ElMessage.error(`${errorMessage}，请检查后端服务是否运行在正确的端口上`)
-
-    // 显示连接信息帮助用户调试
-    console.warn('WebSocket连接信息:', {
-      host: 'localhost', // 可以通过settingsStore获取
-      port: 20914, // 可以通过settingsStore获取
-      endpoint: '/ws/tasks',
-      fullUrl: 'ws://localhost:20914/ws/tasks',
-    })
+    ElMessage.error('连接任务服务失败，请检查后端服务是否运行')
   } finally {
     connecting.value = false
   }
 }
 
-// 加载任务列表
+// 加载任务列表（通过WebSocket）
 const loadTasks = async () => {
   try {
-    await taskService.getTasks()
+    const manager = getWebSocketManager('TASK_MANAGER')
+    if (manager && manager.isConnected) {
+      manager.sendMessage({ type: 'get_tasks' })
+    } else {
+      ElMessage.warning('请先连接任务服务')
+    }
   } catch (error) {
     ElMessage.error('加载任务列表失败')
     console.error(error)
@@ -571,8 +585,16 @@ const deleteTask = async (task: Task) => {
       type: 'warning',
     })
 
-    await taskService.deleteTask(task.id)
-    ElMessage.success('任务删除成功')
+    const manager = getWebSocketManager('TASK_MANAGER')
+    if (manager && manager.isConnected) {
+      manager.sendMessage({
+        type: 'delete_task',
+        task_id: task.id,
+      })
+      ElMessage.success('任务删除请求已发送')
+    } else {
+      ElMessage.warning('请先连接任务服务')
+    }
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error('删除任务失败')
@@ -591,10 +613,19 @@ const clearAllTasks = async () => {
     })
 
     // 接口文档中没有批量删除API，通过逐个删除实现
+    const manager = getWebSocketManager('TASK_MANAGER')
+    if (!manager || !manager.isConnected) {
+      ElMessage.warning('请先连接任务服务')
+      return
+    }
+
     const currentTasks = [...tasks.value]
     for (const task of currentTasks) {
       try {
-        await taskService.deleteTask(task.id)
+        manager.sendMessage({
+          type: 'delete_task',
+          task_id: task.id,
+        })
       } catch (error) {
         console.error(`删除任务 ${task.id} 失败:`, error)
       }
@@ -609,23 +640,36 @@ const clearAllTasks = async () => {
   }
 }
 
-// 保存任务（创建或更新）
+// 保存任务（创建或更新）- 通过WebSocket
 const saveTask = async () => {
   try {
     saving.value = true
+    const manager = getWebSocketManager('TASK_MANAGER')
+
+    if (!manager || !manager.isConnected) {
+      ElMessage.warning('请先连接任务服务')
+      return
+    }
 
     if (editingTask.value) {
       // 更新任务 - 通过更新进度来实现任务更新
       if (taskForm.progress) {
-        await taskService.updateTaskProgress(editingTask.value.id, taskForm.progress)
-        ElMessage.success('任务进度更新成功')
+        manager.sendMessage({
+          type: 'update_task',
+          task_id: editingTask.value.id,
+          progress: taskForm.progress,
+        })
+        ElMessage.success('任务进度更新请求已发送')
       }
 
       // 如果状态改变，需要标记完成或取消完成
       if (taskForm.done !== editingTask.value.done) {
         if (taskForm.done) {
-          await taskService.markTaskDone(editingTask.value.id)
-          ElMessage.success('任务标记完成成功')
+          manager.sendMessage({
+            type: 'mark_done',
+            task_id: editingTask.value.id,
+          })
+          ElMessage.success('任务完成请求已发送')
         } else {
           // 接口中没有取消完成的功能，这里暂时不支持
           ElMessage.warning('当前不支持取消任务完成状态')
@@ -634,12 +678,12 @@ const saveTask = async () => {
       }
     } else {
       // 创建任务
-      await taskService.addTask(
-        taskForm.details,
-        taskForm.done_criteria,
-        taskForm.progress || undefined,
-      )
-      ElMessage.success('任务创建成功')
+      manager.sendMessage({
+        type: 'add_task',
+        details: taskForm.details,
+        done_criteria: taskForm.done_criteria,
+      })
+      ElMessage.success('任务创建请求已发送')
     }
 
     showCreateDialog.value = false
@@ -667,11 +711,20 @@ const resetTaskForm = () => {
 const toggleTaskStatus = async (task: Task) => {
   try {
     updatingTask.value = task.id
+    const manager = getWebSocketManager('TASK_MANAGER')
+
+    if (!manager || !manager.isConnected) {
+      ElMessage.warning('请先连接任务服务')
+      return
+    }
 
     if (!task.done) {
       // 标记为完成
-      await taskService.markTaskDone(task.id)
-      ElMessage.success('任务已标记为完成')
+      manager.sendMessage({
+        type: 'mark_done',
+        task_id: task.id,
+      })
+      ElMessage.success('任务完成请求已发送')
     } else {
       // 接口中不支持取消完成，这里提示用户
       ElMessage.warning('当前不支持取消任务完成状态')
@@ -691,27 +744,39 @@ const executeBatchOperation = async () => {
 
   try {
     batchOperating.value = true
+    const manager = getWebSocketManager('TASK_MANAGER')
+
+    if (!manager || !manager.isConnected) {
+      ElMessage.warning('请先连接任务服务')
+      return
+    }
 
     if (batchForm.operation === 'complete') {
       // 批量完成
       for (const taskId of batchForm.selectedTasks) {
         try {
-          await taskService.markTaskDone(taskId)
+          manager.sendMessage({
+            type: 'mark_done',
+            task_id: taskId,
+          })
         } catch (error) {
           console.error(`完成任务 ${taskId} 失败:`, error)
         }
       }
-      ElMessage.success(`已完成 ${batchForm.selectedTasks.length} 个任务`)
+      ElMessage.success(`已发送 ${batchForm.selectedTasks.length} 个任务完成请求`)
     } else if (batchForm.operation === 'delete') {
       // 批量删除
       for (const taskId of batchForm.selectedTasks) {
         try {
-          await taskService.deleteTask(taskId)
+          manager.sendMessage({
+            type: 'delete_task',
+            task_id: taskId,
+          })
         } catch (error) {
           console.error(`删除任务 ${taskId} 失败:`, error)
         }
       }
-      ElMessage.success(`已删除 ${batchForm.selectedTasks.length} 个任务`)
+      ElMessage.success(`已发送 ${batchForm.selectedTasks.length} 个任务删除请求`)
     }
 
     showBatchDialog.value = false
@@ -724,18 +789,9 @@ const executeBatchOperation = async () => {
   }
 }
 
-// 组件挂载时尝试连接WebSocket（静默失败）
+// 组件挂载时不再自动连接，让用户手动连接
 onMounted(async () => {
-  try {
-    // 尝试连接WebSocket，如果失败则让用户手动连接
-    await taskService.connect()
-
-    // 连接成功后加载任务数据
-    await loadTasks()
-  } catch (error) {
-    // 静默失败，让用户看到未连接状态并手动连接
-    console.warn('自动连接任务服务失败，用户可以手动连接:', error)
-  }
+  console.log('任务管理器已加载，请手动连接任务服务')
 })
 
 // 显示连接帮助
@@ -743,9 +799,9 @@ const showConnectionHelp = () => {
   showHelpDialog.value = true
 }
 
-// 组件卸载前断开连接
+// 组件卸载前不需要特殊处理，全局管理器会处理连接
 onBeforeUnmount(() => {
-  taskService.disconnect()
+  console.log('任务管理器组件卸载')
 })
 </script>
 

@@ -12,6 +12,7 @@ import TokenUsage from '../views/TokenUsage.vue'
 import TaskManager from '../views/TaskManager.vue'
 import WebSocketDebugger from '../views/WebSocketDebugger.vue'
 import HeartbeatTest from '../views/HeartbeatTest.vue'
+import WebSocketMonitor from '../views/WebSocketMonitor.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -126,6 +127,15 @@ const router = createRouter({
       component: HeartbeatTest,
       meta: {
         title: '心跳机制测试',
+      },
+    },
+    // WebSocket 连接监控
+    {
+      path: '/websocket-monitor',
+      name: 'websocket-monitor',
+      component: WebSocketMonitor,
+      meta: {
+        title: 'WebSocket 连接监控',
       },
     },
   ],

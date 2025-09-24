@@ -287,6 +287,12 @@ import {
   subscribePlayerWS,
 } from '../services/websocket'
 import { reactive } from 'vue'
+import { useWebSocketData } from '../stores/websocketData'
+import {
+  getGlobalConnectionStatus,
+  connectSingleEndpoint,
+  disconnectSingleEndpoint,
+} from '../services/globalWebSocketService'
 
 // 装备物品类型定义
 interface EquipmentItem {
@@ -305,47 +311,18 @@ interface InventoryItem {
   max_damage: number
 }
 
-// 本地玩家数据存储
-const playerDataStore = reactive({
-  name: '',
-  health: 0,
-  max_health: 0,
-  food: 0,
-  max_food: 0,
-  experience: 0,
-  level: 0,
-  gamemode: '',
-  position: {
-    x: 0,
-    y: 0,
-    z: 0,
-    yaw: 0,
-    pitch: 0,
-    on_ground: true,
-  },
-  equipment: {
-    main_hand: null as EquipmentItem | null,
-    helmet: null as EquipmentItem | null,
-    chestplate: null as EquipmentItem | null,
-    leggings: null as EquipmentItem | null,
-    boots: null as EquipmentItem | null,
-  },
-  inventory: {
-    occupied_slots: 0,
-    total_slots: 0,
-    empty_slots: 0,
-    items: [] as InventoryItem[],
-  },
-})
+// 使用全局WebSocket数据存储
+const { playerData } = useWebSocketData()
+const globalConnectionStatus = getGlobalConnectionStatus()
 
-// 玩家数据计算属性
-const playerData = computed(() => playerDataStore)
+// 玩家数据计算属性（保持兼容性）
+const playerDataComputed = computed(() => playerData)
 
 // WebSocket管理器
 const playerWSManager = getWebSocketManager('PLAYER')
 
-// 连接状态
-const isConnected = computed(() => playerWSManager.isConnected)
+// 连接状态（使用全局状态）
+const isConnected = computed(() => globalConnectionStatus.connectionStatus.PLAYER || false)
 
 // 连接状态显示
 const connectionStatus = computed(() => {
@@ -364,28 +341,34 @@ const connectionStatus = computed(() => {
   }
 })
 
-// 连接WebSocket
-const connect = () => {
-  connectPlayerWS()
-  ElMessage.success('正在连接玩家数据...')
+// 连接WebSocket（使用全局连接管理）
+const connect = async () => {
+  try {
+    await connectSingleEndpoint('PLAYER')
+  } catch (error) {
+    console.error('连接失败:', error)
+  }
 }
 
-// 断开WebSocket
+// 断开WebSocket（使用全局连接管理）
 const disconnect = () => {
-  disconnectPlayerWS()
-  ElMessage.info('已断开连接')
+  try {
+    disconnectSingleEndpoint('PLAYER')
+  } catch (error) {
+    console.error('断开连接失败:', error)
+  }
 }
 
 // 获取生命值百分比
 const getHealthPercentage = () => {
-  if (!playerDataStore.health || !playerDataStore.max_health) return 0
-  return (playerDataStore.health / playerDataStore.max_health) * 100
+  if (!playerData.health || !playerData.max_health) return 0
+  return (playerData.health / playerData.max_health) * 100
 }
 
 // 获取饥饿值百分比
 const getFoodPercentage = () => {
-  if (!playerDataStore.food || !playerDataStore.max_food) return 0
-  return (playerDataStore.food / playerDataStore.max_food) * 100
+  if (!playerData.food || !playerData.max_food) return 0
+  return (playerData.food / playerData.max_food) * 100
 }
 
 // 获取生命值颜色
@@ -418,14 +401,12 @@ const getDurabilityColor = (item: any) => {
   return '#F56C6C'
 }
 
-// 消息处理器
+// 消息处理器（现在数据由全局状态管理，这里只处理心跳）
 const handlePlayerMessage = (message: any) => {
-  if (message.type === 'player_update') {
-    // 更新玩家数据
-    Object.assign(playerDataStore, message.data)
-  } else if (message.type === 'pong') {
+  if (message.type === 'pong') {
     console.log('[PlayerStatus] Heartbeat received')
   }
+  // 玩家数据更新现在由全局状态管理处理
 }
 
 // 连接状态变化处理

@@ -155,6 +155,7 @@ import { ref, onMounted, onUnmounted, computed } from 'vue'
 import WebSocketManager from '@/components/WebSocketManager.vue'
 import FilterPanel from '@/components/FilterPanel.vue'
 import SettingsDialog from '@/components/SettingsDialog.vue'
+import { useWebSocketData } from '@/stores/websocketData'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -216,10 +217,13 @@ interface StatsResponse {
   }>
 }
 
+// 使用全局WebSocket数据存储
+const { events: globalEvents } = useWebSocketData()
+
 // 响应式数据
 const loading = ref(false)
 const searching = ref(false)
-const events = ref<EventItem[]>([])
+const events = computed(() => globalEvents)
 const stats = ref<StatsResponse | null>(null)
 const total = ref(0)
 const currentPage = ref(1)
