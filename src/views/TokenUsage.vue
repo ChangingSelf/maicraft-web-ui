@@ -1,30 +1,21 @@
 <template>
   <div class="token-usage-page">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <h2>Token 使用量监控</h2>
-      <div class="header-actions">
+    <PageHeader title="Token 使用量监控">
+      <template #actions>
         <el-button type="primary" :icon="Refresh" @click="refreshUsage" :loading="loading">
           刷新数据
         </el-button>
-        <el-button
-          type="success"
-          :icon="VideoPlay"
-          @click="startMonitoring"
-          :disabled="isConnected"
-        >
-          开始监控
-        </el-button>
-        <el-button
-          type="danger"
-          :icon="VideoPause"
-          @click="stopMonitoring"
-          :disabled="!isConnected"
-        >
-          停止监控
-        </el-button>
-      </div>
-    </div>
+        <ConnectionStatus
+          :is-connected="isConnected"
+          :connecting="connecting"
+          :disconnecting="disconnecting"
+          connect-text="开始监控"
+          disconnect-text="停止监控"
+          @connect="startMonitoring"
+          @disconnect="stopMonitoring"
+        />
+      </template>
+    </PageHeader>
 
     <!-- 监控控制面板 -->
     <div class="control-panel">
@@ -234,16 +225,9 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
-import {
-  Refresh,
-  VideoPlay,
-  VideoPause,
-  Coin,
-  Document,
-  ChatDotRound,
-  User,
-} from '@element-plus/icons-vue'
+import { Refresh, Coin, Document, ChatDotRound, User } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { PageHeader, ConnectionStatus } from '@/components/common'
 import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
 import { useWebSocketData } from '@/stores/websocketData'
 import {
@@ -264,6 +248,8 @@ const globalConnectionStatus = getGlobalConnectionStatus()
 
 const isConnected = computed(() => globalConnectionStatus.connectionStatus.TOKEN_USAGE || false)
 const loading = ref(false)
+const connecting = ref(false)
+const disconnecting = ref(false)
 const wsManager = ref<any>(null)
 
 // 处理器引用（用于清理）
@@ -437,6 +423,7 @@ const handleWebSocketMessage = (data: any) => {
 // 开始监控（使用全局连接管理）
 const startMonitoring = async () => {
   try {
+    connecting.value = true
     await connectSingleEndpoint('TOKEN_USAGE')
 
     // 连接成功后，发送获取当前使用量的消息
@@ -448,15 +435,20 @@ const startMonitoring = async () => {
     }, 1000) // 延迟1秒确保连接稳定
   } catch (error) {
     console.error('Token监控连接失败:', error)
+  } finally {
+    connecting.value = false
   }
 }
 
 // 停止监控（使用全局连接管理）
 const stopMonitoring = () => {
   try {
+    disconnecting.value = true
     disconnectSingleEndpoint('TOKEN_USAGE')
   } catch (error) {
     console.error('Token监控断开失败:', error)
+  } finally {
+    disconnecting.value = false
   }
 }
 
@@ -519,45 +511,19 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@import '@/styles/common.css';
+
 .token-usage-page {
   padding: 20px;
   max-width: 1400px;
   margin: 0 auto;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
+/* 页面头部样式已移至通用样式文件 */
 
-.page-header h2 {
-  margin: 0;
-  color: #333;
-}
+/* 头部和控制面板样式已移至通用样式文件 */
 
-.header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.control-panel {
-  margin-bottom: 24px;
-}
-
-.control-row {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.control-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
+/* 控制项样式已移至通用样式文件 */
 
 .control-item label {
   font-weight: 500;

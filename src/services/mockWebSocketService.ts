@@ -105,8 +105,8 @@ export class MockWebSocketManager {
     this.connectionHandlers.forEach((handler) => handler(true))
 
     // 立即同步全局连接状态
-    setTimeout(() => {
-      const { syncConnectionStatus } = require('./globalWebSocketService')
+    setTimeout(async () => {
+      const { syncConnectionStatus } = await import('./globalWebSocketService')
       syncConnectionStatus()
       console.log(`[MockWS] ${this.endpoint} 全局连接状态已同步`)
     }, 100)
@@ -639,8 +639,8 @@ export const connectAllMockEndpoints = async (): Promise<void> => {
   ).length
 
   // 强制同步全局连接状态
-  setTimeout(() => {
-    const { syncConnectionStatus } = require('./globalWebSocketService')
+  setTimeout(async () => {
+    const { syncConnectionStatus } = await import('./globalWebSocketService')
     syncConnectionStatus()
     console.log(`[MockWS] 批量连接后全局状态已同步`)
   }, 200)

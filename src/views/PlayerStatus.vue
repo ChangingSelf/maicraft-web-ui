@@ -1,22 +1,16 @@
 <template>
   <div class="player-status">
-    <div class="page-header">
-      <h2>玩家状态</h2>
-      <div class="header-actions">
-        <el-button type="primary" @click="connect" v-if="!isConnected">
-          <el-icon><VideoPlay /></el-icon>
-          连接
-        </el-button>
-        <el-button type="danger" @click="disconnect" v-else>
-          <el-icon><VideoPause /></el-icon>
-          断开
-        </el-button>
-        <el-tag :type="connectionStatus.type" size="large">
-          <el-icon><component :is="connectionStatus.icon" /></el-icon>
-          {{ connectionStatus.text }}
-        </el-tag>
-      </div>
-    </div>
+    <PageHeader title="玩家状态">
+      <template #actions>
+        <ConnectionStatus
+          :is-connected="isConnected"
+          :connecting="connecting"
+          :disconnecting="disconnecting"
+          @connect="connect"
+          @disconnect="disconnect"
+        />
+      </template>
+    </PageHeader>
 
     <div class="player-content">
       <!-- 玩家基本信息 -->
@@ -269,17 +263,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import {
-  VideoPlay,
-  VideoPause,
-  User,
-  Location,
-  Box,
-  CircleCheck,
-  CircleClose,
-} from '@element-plus/icons-vue'
+import { User, Location, Box, CircleCheck, CircleClose } from '@element-plus/icons-vue'
+import { PageHeader, ConnectionStatus } from '@/components/common'
 import {
   getWebSocketManager,
   connectPlayerWS,
@@ -324,6 +311,10 @@ const playerWSManager = getWebSocketManager('PLAYER')
 // 连接状态（使用全局状态）
 const isConnected = computed(() => globalConnectionStatus.connectionStatus.PLAYER || false)
 
+// 连接中和断开中状态
+const connecting = ref(false)
+const disconnecting = ref(false)
+
 // 连接状态显示
 const connectionStatus = computed(() => {
   if (isConnected.value) {
@@ -344,18 +335,24 @@ const connectionStatus = computed(() => {
 // 连接WebSocket（使用全局连接管理）
 const connect = async () => {
   try {
+    connecting.value = true
     await connectSingleEndpoint('PLAYER')
   } catch (error) {
     console.error('连接失败:', error)
+  } finally {
+    connecting.value = false
   }
 }
 
 // 断开WebSocket（使用全局连接管理）
 const disconnect = () => {
   try {
+    disconnecting.value = true
     disconnectSingleEndpoint('PLAYER')
   } catch (error) {
     console.error('断开连接失败:', error)
+  } finally {
+    disconnecting.value = false
   }
 }
 
@@ -438,35 +435,15 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@import '@/styles/common.css';
+
 .player-status {
   padding: 20px;
   background-color: #f5f5f5;
   min-height: 100vh;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.page-header h2 {
-  margin: 0;
-  color: #333;
-  font-size: 24px;
-  font-weight: 600;
-}
-
-.header-actions {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
+/* 页面头部样式已移至通用样式文件 */
 
 .player-content {
   display: grid;
@@ -481,39 +458,9 @@ onUnmounted(() => {
   background: white;
 }
 
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  color: #333;
-}
+/* 卡片头部样式已移至通用样式文件 */
 
-.basic-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-}
-
-.basic-item {
-  text-align: center;
-  padding: 16px;
-  background: #fafafa;
-  border-radius: 8px;
-  border: 1px solid #e6e6e6;
-}
-
-.item-label {
-  font-size: 14px;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.item-value {
-  font-size: 18px;
-  font-weight: 600;
-  color: #333;
-}
+/* 基本网格和项目样式已移至通用样式文件 */
 
 .health-grid {
   display: grid;

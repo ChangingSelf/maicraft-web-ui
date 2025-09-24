@@ -14,6 +14,7 @@ import WebSocketDebugger from '../views/WebSocketDebugger.vue'
 import HeartbeatTest from '../views/HeartbeatTest.vue'
 import WebSocketMonitor from '../views/WebSocketMonitor.vue'
 import WebSocketSimulator from '../views/WebSocketSimulator.vue'
+import ComponentTest from '../views/ComponentTest.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -146,6 +147,15 @@ const router = createRouter({
       component: WebSocketSimulator,
       meta: {
         title: 'WebSocket 模拟器',
+      },
+    },
+    // 组件测试页面
+    {
+      path: '/component-test',
+      name: 'component-test',
+      component: ComponentTest,
+      meta: {
+        title: '组件测试',
       },
     },
   ],
