@@ -140,6 +140,35 @@ const globalStatus = reactive<GlobalConnectionStatus>({
   connectionDetails: {} as Record<WSEndpointType, any>,
 })
 
+/**
+ * 格式化错误信息，确保错误能够正确显示
+ */
+function formatError(error: any): string {
+  if (error instanceof Error) {
+    return error.message || error.toString()
+  }
+
+  if (typeof error === 'string') {
+    return error
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    try {
+      // 尝试序列化对象，限制长度避免过长
+      const serialized = JSON.stringify(error, null, 2)
+      return serialized.length > 200 ? serialized.substring(0, 200) + '...' : serialized
+    } catch {
+      // 如果序列化失败，尝试提取有用的属性
+      if (error.message) return error.message
+      if (error.code) return `错误代码: ${error.code}`
+      if (error.status) return `状态码: ${error.status}`
+      return '未知错误对象'
+    }
+  }
+
+  return String(error)
+}
+
 // 初始化连接详情
 ALL_ENDPOINTS.forEach((endpoint) => {
   globalStatus.connectionStatus[endpoint] = false
@@ -233,7 +262,7 @@ export async function connectAllWebSockets(): Promise<void> {
         const errorHandler = (error: Event) => {
           const details = globalStatus.connectionDetails[endpoint]
           details.errorCount++
-          details.lastError = error instanceof Error ? error.message : String(error)
+          details.lastError = formatError(error)
         }
 
         // 检查是否已经有全局处理器，避免重复添加
@@ -267,8 +296,7 @@ export async function connectAllWebSockets(): Promise<void> {
       } catch (error) {
         console.error(`[GlobalWS] ${endpoint} 连接失败:`, error)
         globalStatus.connectionDetails[endpoint].errorCount++
-        globalStatus.connectionDetails[endpoint].lastError =
-          error instanceof Error ? error.message : String(error)
+        globalStatus.connectionDetails[endpoint].lastError = formatError(error)
       }
     })
 
@@ -399,8 +427,7 @@ export async function connectSingleEndpoint(endpoint: WSEndpointType): Promise<v
     console.error(`[GlobalWS] ${endpoint} 连接失败:`, error)
     ElMessage.error(`${endpoint} 连接失败`)
     globalStatus.connectionDetails[endpoint].errorCount++
-    globalStatus.connectionDetails[endpoint].lastError =
-      error instanceof Error ? error.message : String(error)
+    globalStatus.connectionDetails[endpoint].lastError = formatError(error)
   }
 }
 
