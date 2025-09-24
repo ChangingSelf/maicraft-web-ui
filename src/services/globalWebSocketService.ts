@@ -255,7 +255,15 @@ export async function connectAllWebSockets(): Promise<void> {
         // 连接WebSocket
         await manager.connect()
 
-        console.log(`[GlobalWS] ${endpoint} 连接成功`)
+        // 连接完成后立即检查连接状态
+        const isConnected = manager.isConnected
+        globalStatus.connectionStatus[endpoint] = isConnected
+        if (isConnected) {
+          globalStatus.connectionDetails[endpoint].connected = true
+          globalStatus.connectionDetails[endpoint].lastConnected = Date.now()
+        }
+
+        console.log(`[GlobalWS] ${endpoint} 连接${isConnected ? '成功' : '失败'}`)
       } catch (error) {
         console.error(`[GlobalWS] ${endpoint} 连接失败:`, error)
         globalStatus.connectionDetails[endpoint].errorCount++
@@ -266,7 +274,21 @@ export async function connectAllWebSockets(): Promise<void> {
 
     await Promise.allSettled(connectionPromises)
 
+    // 立即更新全局状态
+    updateGlobalStatus()
+
+    // 等待连接状态稳定，给连接状态更新一些时间
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+
+    // 再次更新状态以确保准确性
+    updateGlobalStatus()
+
     const connectedCount = Object.values(globalStatus.connectionStatus).filter(Boolean).length
+
+    // 调试信息：显示每个端点的连接状态
+    console.log('[GlobalWS] 连接状态详情:', globalStatus.connectionStatus)
+    console.log('[GlobalWS] 连接详情:', globalStatus.connectionDetails)
+
     ElMessage.success(`连接完成！已连接 ${connectedCount}/${ALL_ENDPOINTS.length} 个端点`)
   } catch (error) {
     console.error('[GlobalWS] 连接过程出错:', error)
