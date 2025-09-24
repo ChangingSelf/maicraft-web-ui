@@ -410,6 +410,7 @@ onMounted(() => {
   refreshTimer.value = window.setInterval(() => {
     // 同步连接状态，确保显示准确
     syncConnectionStatus()
+    console.log('[WebSocketMonitor] 状态同步完成，当前连接数:', connectionCount.value)
   }, 3000) // 每3秒检查一次状态
 })
 

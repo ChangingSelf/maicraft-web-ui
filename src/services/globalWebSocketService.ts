@@ -7,6 +7,12 @@ import {
   subscribeWebSocket,
 } from './websocket'
 import { updateEndpointData } from '../stores/websocketData'
+import {
+  getMockWebSocketManager,
+  getMockServiceState,
+  enableMockService,
+  disableMockService,
+} from './mockWebSocketService'
 
 // 全局连接状态管理
 export interface GlobalConnectionStatus {
@@ -130,6 +136,9 @@ const ENDPOINT_SUBSCRIPTION_CONFIGS: Record<
   },
 }
 
+// 模拟模式状态
+const isMockMode = ref(false)
+
 // 全局连接状态
 const globalStatus = reactive<GlobalConnectionStatus>({
   isConnecting: false,
@@ -217,12 +226,16 @@ export async function connectAllWebSockets(): Promise<void> {
   }
 
   globalStatus.isConnecting = true
-  ElMessage.info('开始连接所有WebSocket端点...')
+  const modeText = isMockMode.value ? '模拟' : '真实'
+  ElMessage.info(`开始连接所有${modeText}WebSocket端点...`)
 
   try {
     const connectionPromises = ALL_ENDPOINTS.map(async (endpoint) => {
       try {
-        const manager = getWebSocketManager(endpoint)
+        // 根据模拟模式选择不同的管理器
+        const manager = isMockMode.value
+          ? getMockWebSocketManager(endpoint)
+          : getWebSocketManager(endpoint)
 
         // 添加连接状态监听
         const connectionHandler = (connected: boolean) => {
@@ -342,12 +355,17 @@ export async function connectAllWebSockets(): Promise<void> {
  * 断开所有WebSocket连接
  */
 export function disconnectAllWebSockets(): void {
-  ElMessage.info('正在断开所有WebSocket连接...')
+  const modeText = isMockMode.value ? '模拟' : '真实'
+  ElMessage.info(`正在断开所有${modeText}WebSocket连接...`)
 
   let disconnectedCount = 0
   ALL_ENDPOINTS.forEach((endpoint) => {
     try {
-      const manager = getWebSocketManager(endpoint)
+      // 根据模拟模式选择不同的管理器
+      const manager = isMockMode.value
+        ? getMockWebSocketManager(endpoint)
+        : getWebSocketManager(endpoint)
+
       if (manager.isConnected) {
         manager.disconnect()
         disconnectedCount++
@@ -362,32 +380,72 @@ export function disconnectAllWebSockets(): void {
   })
 
   updateGlobalStatus()
-  ElMessage.success(`已断开 ${disconnectedCount} 个连接`)
+  ElMessage.success(`已断开 ${disconnectedCount} 个${modeText}连接`)
 }
 
 /**
  * 同步所有端点的实际连接状态
  */
-function syncConnectionStatus(): void {
+export function syncConnectionStatus(): void {
   let hasChanges = false
 
   ALL_ENDPOINTS.forEach((endpoint) => {
     try {
-      const manager = getWebSocketManager(endpoint)
-      const actualConnected = manager.isConnected
-      const currentStatus = globalStatus.connectionStatus[endpoint]
+      let actualConnected = false
+      let messageCount = 0
+      let errorCount = 0
+      let lastError = undefined
 
-      if (actualConnected !== currentStatus) {
+      if (isMockMode.value) {
+        // 模拟模式：从模拟服务状态获取
+        const mockServiceState = getMockServiceState()
+        const mockConnection = mockServiceState.connections[endpoint]
+        if (mockConnection) {
+          actualConnected = mockConnection.connected
+          messageCount = mockConnection.messageCount
+          errorCount = mockConnection.errorCount
+          lastError = mockConnection.lastError
+          console.log(`[GlobalWS] ${endpoint} 模拟状态同步:`, {
+            connected: actualConnected,
+            messageCount,
+            errorCount,
+          })
+        }
+      } else {
+        // 真实模式：从真实管理器获取
+        const manager = getWebSocketManager(endpoint)
+        actualConnected = manager.isConnected
+        // 真实模式的消息计数从connectionDetails获取
+        const details = globalStatus.connectionDetails[endpoint]
+        if (details) {
+          messageCount = details.messageCount
+          errorCount = details.errorCount
+          lastError = details.lastError
+        }
+      }
+
+      const currentStatus = globalStatus.connectionStatus[endpoint]
+      const details = globalStatus.connectionDetails[endpoint]
+
+      if (actualConnected !== currentStatus || (details && details.messageCount !== messageCount)) {
         console.log(`[GlobalWS] ${endpoint} 状态同步: ${currentStatus} -> ${actualConnected}`)
         globalStatus.connectionStatus[endpoint] = actualConnected
 
-        const details = globalStatus.connectionDetails[endpoint]
         if (actualConnected) {
           details.connected = true
-          details.lastConnected = Date.now()
+          if (!details.lastConnected || details.lastConnected === 0) {
+            details.lastConnected = Date.now()
+          }
         } else {
           details.connected = false
           details.lastDisconnected = Date.now()
+        }
+
+        // 更新消息和错误统计
+        details.messageCount = messageCount
+        details.errorCount = errorCount
+        if (lastError) {
+          details.lastError = lastError
         }
 
         hasChanges = true
@@ -418,10 +476,7 @@ export function getGlobalConnectionStatus(): GlobalConnectionStatus {
   return globalStatus
 }
 
-/**
- * 导出状态同步函数供外部使用
- */
-export { syncConnectionStatus }
+// syncConnectionStatus函数已在上方导出，无需重复导出
 
 /**
  * 获取特定端点的连接状态
@@ -442,7 +497,10 @@ export function getAllEndpoints(): WSEndpointType[] {
  */
 export async function connectSingleEndpoint(endpoint: WSEndpointType): Promise<void> {
   try {
-    const manager = getWebSocketManager(endpoint)
+    // 根据模拟模式选择不同的管理器
+    const manager = isMockMode.value
+      ? getMockWebSocketManager(endpoint)
+      : getWebSocketManager(endpoint)
 
     // 添加连接状态监听器（如果还没有的话）
     const connectionHandler = (connected: boolean) => {
@@ -496,7 +554,11 @@ export function subscribeSingleEndpoint(endpoint: WSEndpointType): boolean {
  */
 export function disconnectSingleEndpoint(endpoint: WSEndpointType): void {
   try {
-    const manager = getWebSocketManager(endpoint)
+    // 根据模拟模式选择不同的管理器
+    const manager = isMockMode.value
+      ? getMockWebSocketManager(endpoint)
+      : getWebSocketManager(endpoint)
+
     manager.disconnect()
     globalStatus.connectionStatus[endpoint] = false
     globalStatus.connectionDetails[endpoint].connected = false
@@ -506,5 +568,51 @@ export function disconnectSingleEndpoint(endpoint: WSEndpointType): void {
   } catch (error) {
     console.error(`[GlobalWS] ${endpoint} 断开失败:`, error)
     ElMessage.error(`${endpoint} 断开失败`)
+  }
+}
+
+/**
+ * 启用模拟模式
+ */
+export function enableMockMode(): void {
+  isMockMode.value = true
+  enableMockService()
+  console.log('[GlobalWS] 模拟模式已启用')
+}
+
+/**
+ * 禁用模拟模式
+ */
+export function disableMockMode(): void {
+  isMockMode.value = false
+  disableMockService()
+  console.log('[GlobalWS] 模拟模式已禁用')
+}
+
+/**
+ * 获取当前是否为模拟模式
+ */
+export function getIsMockMode(): boolean {
+  return isMockMode.value
+}
+
+/**
+ * 切换模拟模式
+ */
+export function toggleMockMode(): void {
+  if (isMockMode.value) {
+    disableMockMode()
+  } else {
+    enableMockMode()
+  }
+}
+
+/**
+ * 获取模拟服务状态（用于UI显示）
+ */
+export function getMockModeStatus() {
+  return {
+    isMockMode: isMockMode.value,
+    mockServiceState: getMockServiceState(),
   }
 }

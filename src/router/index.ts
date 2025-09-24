@@ -13,6 +13,7 @@ import TaskManager from '../views/TaskManager.vue'
 import WebSocketDebugger from '../views/WebSocketDebugger.vue'
 import HeartbeatTest from '../views/HeartbeatTest.vue'
 import WebSocketMonitor from '../views/WebSocketMonitor.vue'
+import WebSocketSimulator from '../views/WebSocketSimulator.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -136,6 +137,15 @@ const router = createRouter({
       component: WebSocketMonitor,
       meta: {
         title: 'WebSocket 连接监控',
+      },
+    },
+    // WebSocket 模拟器
+    {
+      path: '/websocket-simulator',
+      name: 'websocket-simulator',
+      component: WebSocketSimulator,
+      meta: {
+        title: 'WebSocket 模拟器',
       },
     },
   ],

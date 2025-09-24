@@ -404,7 +404,7 @@ import {
   Connection,
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getTaskService, type Task } from '../services'
+import { type Task } from '../services'
 import { useWebSocketData } from '@/stores/websocketData'
 import {
   getGlobalConnectionStatus,
@@ -418,8 +418,7 @@ defineOptions({
   name: 'TaskManager',
 })
 
-// 获取任务服务实例
-const taskService = getTaskService()
+// TaskManager现在使用全局WebSocket数据，不需要直接使用taskService
 
 // 响应式数据
 const saving = ref(false)

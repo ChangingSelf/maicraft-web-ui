@@ -73,13 +73,26 @@ export class TaskService {
   })
 
   constructor() {
+    // 延迟初始化WebSocket，避免在Pinia未初始化时访问store
     this.initWebSocket()
   }
 
   // 初始化WebSocket连接
   private initWebSocket() {
     try {
-      this.wsManager = getWebSocketManager('TASK_MANAGER')
+      // 检查Pinia是否已初始化，如果没有则延迟初始化
+      try {
+        this.wsManager = getWebSocketManager('TASK_MANAGER')
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('getActivePinia')) {
+          console.log('[TaskService] Pinia未初始化，延迟初始化WebSocket')
+          setTimeout(() => {
+            this.initWebSocket()
+          }, 100)
+          return
+        }
+        throw error
+      }
 
       // 设置消息处理器
       this.messageHandler = (message: any) => {

@@ -204,7 +204,9 @@ export const services = {
   actions: actionService,
   locations: locationService,
   gameObjects: gameObjectService,
-  tasks: getTaskService(),
+  get tasks() {
+    return getTaskService()
+  },
 }
 
 // 默认导出所有服务

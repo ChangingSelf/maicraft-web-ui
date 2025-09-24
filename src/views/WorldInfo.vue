@@ -75,7 +75,7 @@
               <div class="block-position">
                 ({{ block.position.x }}, {{ block.position.y }}, {{ block.position.z }})
               </div>
-              <div class="block-distance">{{ block.distance.toFixed(1) }}m</div>
+              <div class="block-distance">{{ block.distance?.toFixed(1) }}m</div>
             </div>
           </el-card>
         </div>
@@ -111,7 +111,7 @@
                 />
                 <span>{{ entity.health }}/{{ entity.max_health }}</span>
               </div>
-              <div class="entity-distance">{{ entity.distance.toFixed(1) }}m</div>
+              <div class="entity-distance">{{ entity.distance?.toFixed(1) }}m</div>
             </div>
           </el-card>
         </div>

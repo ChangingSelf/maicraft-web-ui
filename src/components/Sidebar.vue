@@ -100,6 +100,7 @@
           </template>
           <el-menu-item index="websocket-monitor">WebSocket 监控</el-menu-item>
           <el-menu-item index="websocket-debugger">WebSocket 调试</el-menu-item>
+          <el-menu-item index="websocket-simulator">WebSocket 模拟器</el-menu-item>
           <el-menu-item index="heartbeat-test">心跳测试</el-menu-item>
         </el-sub-menu>
 
@@ -123,6 +124,30 @@
         </div>
       </div>
 
+      <!-- 模拟模式切换 -->
+      <div class="mock-mode-section" v-if="!isCollapsed">
+        <div class="mock-mode-header">
+          <span class="mock-mode-label">{{ isMockMode ? '模拟模式' : '真实模式' }}</span>
+          <el-switch
+            v-model="isMockMode"
+            active-color="#67c23a"
+            inactive-color="#409eff"
+            @change="handleMockModeToggle"
+            size="small"
+          />
+        </div>
+        <el-button
+          v-if="isMockMode"
+          class="quick-action-btn mock-connect-btn"
+          type="success"
+          @click="handleQuickMockStart"
+          size="small"
+        >
+          <el-icon><VideoPlay /></el-icon>
+          <span>快速启动模拟</span>
+        </el-button>
+      </div>
+
       <!-- 连接控制按钮 -->
       <div class="connection-controls" v-if="!isCollapsed">
         <div class="connection-buttons">
@@ -135,7 +160,7 @@
           >
             <el-icon v-if="allConnected"><Switch /></el-icon>
             <el-icon v-else><Link /></el-icon>
-            <span>全部连接</span>
+            <span>{{ isMockMode ? '模拟连接' : '全部连接' }}</span>
           </el-button>
           <el-button
             class="quick-action-btn disconnect-all-btn"
@@ -173,14 +198,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { getCurrentVersionSync, formatVersion } from '../services/versionService'
 import {
   connectAllWebSockets,
   disconnectAllWebSockets,
   getGlobalConnectionStatus,
+  getIsMockMode,
+  enableMockMode,
+  disableMockMode,
 } from '../services/globalWebSocketService'
+import {
+  connectAllMockEndpoints,
+  disconnectAllMockEndpoints,
+} from '../services/mockWebSocketService'
 import { ElMessage } from 'element-plus'
 import {
   House,
@@ -197,6 +229,7 @@ import {
   SwitchButton,
   Switch,
   Link,
+  VideoPlay,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -207,6 +240,7 @@ const isCollapsed = ref(false)
 const serverOnline = ref(true)
 const isMobile = ref(false)
 const showMobileSidebar = ref(false)
+const isMockMode = ref(getIsMockMode())
 
 // WebSocket连接状态
 const globalConnectionStatus = getGlobalConnectionStatus()
@@ -268,6 +302,7 @@ const activeIndex = computed(() => {
   if (path.startsWith('/debug-tools')) return 'debug-tools'
   if (path === '/websocket-monitor') return 'websocket-monitor'
   if (path === '/websocket-debugger') return 'websocket-debugger'
+  if (path === '/websocket-simulator') return 'websocket-simulator'
   if (path === '/heartbeat-test') return 'heartbeat-test'
   if (path === '/settings') return 'settings'
   return 'home'
@@ -291,15 +326,46 @@ const updateSidebarMargin = () => {
   document.documentElement.style.setProperty('--sidebar-width', margin)
 }
 
+// 模拟模式切换处理
+const handleMockModeToggle = (enabled: boolean) => {
+  if (enabled) {
+    enableMockMode()
+    ElMessage.success('已切换到模拟模式')
+  } else {
+    disableMockMode()
+    ElMessage.info('已切换到真实模式')
+  }
+  isMockMode.value = enabled
+}
+
+// 快速启动模拟连接
+const handleQuickMockStart = async () => {
+  try {
+    await connectAllMockEndpoints()
+    ElMessage.success('模拟连接已启动！数据将在1-2秒后开始推送')
+  } catch (error) {
+    console.error('模拟连接启动失败:', error)
+    ElMessage.error('模拟连接启动失败')
+  }
+}
+
 // WebSocket连接处理
 const handleConnectionToggle = async () => {
   try {
     if (allConnected.value) {
       // 如果全部连接，则断开所有连接
-      disconnectAllWebSockets()
+      if (isMockMode.value) {
+        disconnectAllMockEndpoints()
+      } else {
+        disconnectAllWebSockets()
+      }
     } else {
       // 否则连接所有WebSocket
-      await connectAllWebSockets()
+      if (isMockMode.value) {
+        await connectAllMockEndpoints()
+      } else {
+        await connectAllWebSockets()
+      }
     }
   } catch (error) {
     console.error('WebSocket连接操作失败:', error)
@@ -311,6 +377,16 @@ const handleConnectionToggle = async () => {
 onMounted(() => {
   updateSidebarMargin()
   loadVersionInfo()
+
+  // 定期同步模拟模式状态
+  const syncMockModeTimer = setInterval(() => {
+    isMockMode.value = getIsMockMode()
+  }, 2000)
+
+  // 组件卸载时清理定时器
+  onUnmounted(() => {
+    clearInterval(syncMockModeTimer)
+  })
 })
 
 // 处理菜单选择
@@ -382,6 +458,9 @@ const handleSelect = (index: string) => {
     case 'websocket-debugger':
       router.push('/websocket-debugger')
       break
+    case 'websocket-simulator':
+      router.push('/websocket-simulator')
+      break
     case 'heartbeat-test':
       router.push('/heartbeat-test')
       break
@@ -399,7 +478,11 @@ const handleVersionClick = () => {
 // 处理全部断开按钮点击
 const handleDisconnectAll = () => {
   try {
-    disconnectAllWebSockets()
+    if (isMockMode.value) {
+      disconnectAllMockEndpoints()
+    } else {
+      disconnectAllWebSockets()
+    }
   } catch (error) {
     console.error('断开所有连接失败:', error)
     ElMessage.error('断开连接失败')
@@ -558,6 +641,33 @@ watch(
   font-size: 12px;
   color: #666;
   font-weight: 500;
+}
+
+/* 模拟模式切换区域 */
+.mock-mode-section {
+  margin: 12px 0;
+  padding: 10px;
+  background: rgba(103, 194, 58, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(103, 194, 58, 0.3);
+}
+
+.mock-mode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.mock-mode-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #67c23a;
+}
+
+.mock-connect-btn {
+  width: 100%;
+  margin-top: 8px;
 }
 
 /* 连接控制按钮样式 */

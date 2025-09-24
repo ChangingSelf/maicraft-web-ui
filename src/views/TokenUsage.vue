@@ -302,7 +302,7 @@ const connectionStatus = computed(() => {
 // 格式化时间
 const formatTime = (timestamp: number | undefined) => {
   if (!timestamp) return '-'
-  return new Date(timestamp * 1000).toLocaleString('zh-CN')
+  return new Date(timestamp).toLocaleString('zh-CN')
 }
 
 // 建立WebSocket连接
