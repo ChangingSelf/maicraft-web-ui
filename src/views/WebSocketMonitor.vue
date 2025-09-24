@@ -234,6 +234,7 @@ import {
   disconnectSingleEndpoint,
   subscribeSingleEndpoint,
   getAllEndpoints,
+  syncConnectionStatus,
   type GlobalConnectionStatus,
 } from '../services/globalWebSocketService'
 import { type WSEndpointType } from '../services/websocket'
@@ -405,10 +406,11 @@ const getEndpointTagType = (endpoint: string): string => {
 onMounted(() => {
   addLog('SYSTEM', 'info', 'WebSocket监控页面已加载')
 
-  // 定期刷新状态
+  // 定期刷新状态和同步连接状态
   refreshTimer.value = window.setInterval(() => {
-    // 这里可以添加定期刷新逻辑
-  }, 5000)
+    // 同步连接状态，确保显示准确
+    syncConnectionStatus()
+  }, 3000) // 每3秒检查一次状态
 })
 
 onUnmounted(() => {

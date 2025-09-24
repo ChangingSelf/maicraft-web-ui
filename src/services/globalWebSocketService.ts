@@ -248,6 +248,17 @@ export async function connectAllWebSockets(): Promise<void> {
 
         // 添加消息计数监听和数据更新
         const messageHandler = (message: any) => {
+          // 确保连接状态与实际状态同步
+          const manager = getWebSocketManager(endpoint)
+          const actualConnected = manager.isConnected
+          if (actualConnected && !globalStatus.connectionStatus[endpoint]) {
+            console.log(`[GlobalWS] ${endpoint} 通过消息接收发现连接状态不一致，进行同步`)
+            globalStatus.connectionStatus[endpoint] = true
+            globalStatus.connectionDetails[endpoint].connected = true
+            globalStatus.connectionDetails[endpoint].lastConnected = Date.now()
+            updateGlobalStatus()
+          }
+
           globalStatus.connectionDetails[endpoint].messageCount++
 
           // 更新全局数据存储
@@ -355,6 +366,43 @@ export function disconnectAllWebSockets(): void {
 }
 
 /**
+ * 同步所有端点的实际连接状态
+ */
+function syncConnectionStatus(): void {
+  let hasChanges = false
+
+  ALL_ENDPOINTS.forEach((endpoint) => {
+    try {
+      const manager = getWebSocketManager(endpoint)
+      const actualConnected = manager.isConnected
+      const currentStatus = globalStatus.connectionStatus[endpoint]
+
+      if (actualConnected !== currentStatus) {
+        console.log(`[GlobalWS] ${endpoint} 状态同步: ${currentStatus} -> ${actualConnected}`)
+        globalStatus.connectionStatus[endpoint] = actualConnected
+
+        const details = globalStatus.connectionDetails[endpoint]
+        if (actualConnected) {
+          details.connected = true
+          details.lastConnected = Date.now()
+        } else {
+          details.connected = false
+          details.lastDisconnected = Date.now()
+        }
+
+        hasChanges = true
+      }
+    } catch (error) {
+      console.error(`[GlobalWS] 同步 ${endpoint} 状态失败:`, error)
+    }
+  })
+
+  if (hasChanges) {
+    updateGlobalStatus()
+  }
+}
+
+/**
  * 更新全局连接状态
  */
 function updateGlobalStatus(): void {
@@ -369,6 +417,11 @@ function updateGlobalStatus(): void {
 export function getGlobalConnectionStatus(): GlobalConnectionStatus {
   return globalStatus
 }
+
+/**
+ * 导出状态同步函数供外部使用
+ */
+export { syncConnectionStatus }
 
 /**
  * 获取特定端点的连接状态
