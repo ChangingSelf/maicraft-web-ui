@@ -38,8 +38,8 @@
             <el-icon><Document /></el-icon>
             <span>日志查看</span>
           </template>
-          <el-menu-item index="minecraft-logs">Minecraft 日志</el-menu-item>
-          <el-menu-item index="mcp-server-logs">MCP Server 日志</el-menu-item>
+          <el-menu-item index="minecraft-logs">agent 日志</el-menu-item>
+          <el-menu-item index="mcp-server-logs">mcp server 日志</el-menu-item>
         </el-sub-menu>
 
         <!-- 事件查看 -->
@@ -115,24 +115,58 @@
 
     <!-- 侧边栏底部 -->
     <div class="sidebar-footer">
+      <!-- 连接状态显示 -->
+      <div class="connection-status" v-if="!isCollapsed">
+        <div class="status-display">
+          <div class="status-dot" :class="{ online: allConnected }"></div>
+          <span class="status-text">{{ connectionStatusText }}</span>
+        </div>
+      </div>
+
+      <!-- 连接控制按钮 -->
+      <div class="connection-controls" v-if="!isCollapsed">
+        <div class="connection-buttons">
+          <el-button
+            class="quick-action-btn connect-btn"
+            :type="connectionButtonType"
+            :loading="isConnecting"
+            @click="handleConnectionToggle"
+            size="small"
+          >
+            <el-icon v-if="allConnected"><Switch /></el-icon>
+            <el-icon v-else><Link /></el-icon>
+            <span>全部连接</span>
+          </el-button>
+          <el-button
+            class="quick-action-btn disconnect-all-btn"
+            type="danger"
+            @click="handleDisconnectAll"
+            size="small"
+            :disabled="globalConnectionStatus.connectionCount === 0"
+          >
+            <el-icon><SwitchButton /></el-icon>
+            <span>全部断开</span>
+          </el-button>
+        </div>
+      </div>
+
+      <!-- 全局监控按钮 -->
+      <div class="monitor-section" v-if="!isCollapsed">
+        <el-button
+          class="quick-action-btn monitor-btn"
+          type="primary"
+          @click="handleJumpToMonitor"
+          size="small"
+        >
+          <el-icon><Monitor /></el-icon>
+          <span>全局监控</span>
+        </el-button>
+      </div>
+
       <div class="version-info" v-if="!isCollapsed">
         <div class="version-display" @click="handleVersionClick">
           <small>{{ currentVersion }} （点击查看更新日志）</small>
         </div>
-      </div>
-      <div class="server-status" v-if="!isCollapsed">
-        <el-button
-          class="connection-btn"
-          :type="connectionButtonType"
-          :loading="isConnecting"
-          @click="handleConnectionToggle"
-          size="small"
-        >
-          <div class="status-indicator">
-            <div class="status-dot" :class="{ online: allConnected }"></div>
-            <span>{{ connectionButtonText }}</span>
-          </div>
-        </el-button>
       </div>
     </div>
   </el-aside>
@@ -160,6 +194,9 @@ import {
   ArrowRight,
   List,
   Tools,
+  SwitchButton,
+  Switch,
+  Link,
 } from '@element-plus/icons-vue'
 
 const router = useRouter()
@@ -176,18 +213,19 @@ const globalConnectionStatus = getGlobalConnectionStatus()
 const isConnecting = computed(() => globalConnectionStatus.isConnecting)
 const allConnected = computed(() => globalConnectionStatus.allConnected)
 
-// 连接按钮状态
-const connectionButtonType = computed(() => {
-  if (isConnecting.value) return 'primary'
-  return allConnected.value ? 'success' : 'warning'
-})
-
-const connectionButtonText = computed(() => {
+// 连接状态显示文本
+const connectionStatusText = computed(() => {
   if (isConnecting.value) return '连接中...'
   if (allConnected.value) return '全部在线'
   const connectedCount = globalConnectionStatus.connectionCount
   const totalCount = globalConnectionStatus.totalEndpoints
   return `${connectedCount}/${totalCount} 在线`
+})
+
+// 连接按钮状态
+const connectionButtonType = computed(() => {
+  if (isConnecting.value) return 'primary'
+  return allConnected.value ? 'success' : 'warning'
 })
 
 // 版本信息
@@ -358,6 +396,21 @@ const handleVersionClick = () => {
   router.push('/changelog')
 }
 
+// 处理全部断开按钮点击
+const handleDisconnectAll = () => {
+  try {
+    disconnectAllWebSockets()
+  } catch (error) {
+    console.error('断开所有连接失败:', error)
+    ElMessage.error('断开连接失败')
+  }
+}
+
+// 处理全局监控页面跳转
+const handleJumpToMonitor = () => {
+  router.push('/websocket-monitor')
+}
+
 // 监听路由变化，更新活动菜单项
 watch(
   () => route.path,
@@ -473,6 +526,107 @@ watch(
   background: #fafafa;
 }
 
+/* 连接状态显示样式 */
+.connection-status {
+  margin-bottom: 12px;
+}
+
+.status-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #ff4d4f;
+  transition: background-color 0.3s ease;
+  flex-shrink: 0;
+}
+
+.status-dot.online {
+  background-color: #52c41a;
+}
+
+.status-text {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+/* 连接控制按钮样式 */
+.connection-controls {
+  margin-bottom: 12px;
+}
+
+.connection-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+/* 全局监控按钮样式 */
+.monitor-section {
+  margin-bottom: 12px;
+}
+
+.quick-action-btn {
+  width: 100%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.quick-action-btn .el-icon {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.quick-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.disconnect-all-btn {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.disconnect-all-btn:hover {
+  background-color: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.connect-btn {
+  background-color: #f0f9ff;
+  border-color: #bae6fd;
+  color: #0369a1;
+}
+
+.connect-btn:hover {
+  background-color: #e0f2fe;
+  border-color: #7dd3fc;
+}
+
+.monitor-btn {
+  background-color: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.monitor-btn:hover {
+  background-color: #dbeafe;
+  border-color: #93c5fd;
+}
+
 .version-info {
   margin-bottom: 12px;
 }
@@ -494,45 +648,6 @@ watch(
   color: inherit;
   font-size: 12px;
   font-weight: 500;
-}
-
-.server-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.connection-btn {
-  width: 100%;
-  padding: 6px 12px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.connection-btn :deep(.el-button__text) {
-  width: 100%;
-}
-
-.status-indicator {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: inherit;
-  width: 100%;
-  justify-content: flex-start;
-}
-
-.status-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background-color: #ff4d4f;
-  transition: background-color 0.3s ease;
-}
-
-.status-dot.online {
-  background-color: #52c41a;
 }
 
 /* 滚动条样式 */
