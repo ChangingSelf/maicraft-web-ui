@@ -1,17 +1,33 @@
 {
-  "current": "0.17.0",
+  "current": "0.18.0",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
-  "buildDate": "2025-09-20",
-  "buildTime": "23:29:51",
+  "buildDate": "2025-09-24",
+  "buildTime": "22:06:19",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
-    "lastUpdated": "2025-09-20",
-    "totalVersions": 29,
+    "lastUpdated": "2025-09-24",
+    "totalVersions": 30,
     "versions": [
+      {
+        "version": "0.18.0",
+        "date": "2025-09-24",
+        "type": "minor",
+        "changes": {
+          "feat": [
+            "实现全局websocket管理和状态管理",
+            "侧边栏左下角按钮优化",
+            "添加websocket模拟服务器功能"
+          ],
+          "refactor": [
+            "抽取通用组件"
+          ]
+        },
+        "summary": "✨ 新功能 - 实现全局websocket管理和状态管理; ✨ 新功能 - 侧边栏左下角按钮优化; ✨ 新功能 - 添加websocket模拟服务器功能; 🔧 重构 - 抽取通用组件"
+      },
       {
         "version": "0.17.0",
         "date": "2025-09-20",
