@@ -13,11 +13,7 @@
             {{ tool.enabled ? '启用' : '禁用' }}
           </el-tag>
         </div>
-        <div class="tool-actions">
-          <el-button type="primary" :disabled="!tool.enabled" @click="handleExecute">
-            运行工具
-          </el-button>
-        </div>
+        <!-- 移除头部的执行按钮，将在底部固定显示 -->
       </div>
 
       <!-- 工具描述 -->
@@ -33,7 +29,7 @@
       </div>
 
       <!-- 参数配置 -->
-      <div v-if="tool.inputSchema?.properties" class="tool-section">
+      <div v-if="tool.inputSchema?.properties" class="tool-section parameters-section">
         <h4>参数配置</h4>
         <div class="parameters-form">
           <el-form
@@ -337,7 +333,7 @@ watch(
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  height: 100%;
 }
 
 .tool-info-header {
@@ -367,6 +363,13 @@ watch(
   border-bottom: 1px solid #f5f5f5;
 }
 
+.parameters-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .tool-section h4 {
   margin: 0 0 12px 0;
   color: #333;
@@ -383,7 +386,8 @@ watch(
 .parameters-form {
   flex: 1;
   overflow-y: auto;
-  padding: 0 24px;
+  padding: 0 24px 20px 24px;
+  max-height: calc(100vh - 300px);
 }
 
 .param-label {
@@ -423,6 +427,10 @@ watch(
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
 /* 滚动条样式 */

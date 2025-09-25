@@ -19,28 +19,15 @@
       </div>
     </div>
 
-    <!-- 底部面板 -->
+    <!-- 底部历史记录面板 -->
     <div class="bottom-panel">
-      <!-- 历史记录面板 -->
-      <div class="history-section">
-        <HistoryPanel
-          :history="callHistory"
-          :loading="historyLoading"
-          @refresh="loadCallHistory"
-          @clear="clearHistory"
-          @item-selected="showCallDetail"
-        />
-      </div>
-
-      <!-- 服务器通知面板 -->
-      <div class="notification-section">
-        <NotificationPanel
-          :notifications="notifications"
-          @clear="clearNotifications"
-          @mark-read="markNotificationRead"
-          @mark-all-read="markAllNotificationsRead"
-        />
-      </div>
+      <HistoryPanel
+        :history="callHistory"
+        :loading="historyLoading"
+        @refresh="loadCallHistory"
+        @clear="clearHistory"
+        @item-selected="showCallDetail"
+      />
     </div>
 
     <!-- 调用详情对话框 -->
@@ -102,13 +89,7 @@
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mcpApi, type MCPTool, type ToolCall } from '@/services/mcp'
-import {
-  ToolList,
-  ToolDetail,
-  HistoryPanel,
-  NotificationPanel,
-  type MCPNotification,
-} from '@/components/mcp'
+import { ToolList, ToolDetail, HistoryPanel } from '@/components/mcp'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -130,27 +111,6 @@ const tools = ref<MCPTool[]>([])
 const callHistory = ref<ToolCall[]>([])
 const selectedTool = ref<MCPTool | null>(null)
 const selectedCall = ref<ToolCall | null>(null)
-const notifications = ref<MCPNotification[]>([])
-
-// 初始化一些模拟通知数据
-notifications.value = [
-  {
-    id: '1',
-    type: 'info',
-    title: 'MCP服务器连接成功',
-    message: '已成功连接到MCP服务器，所有工具已加载完成',
-    timestamp: Date.now() - 300000,
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'success',
-    title: '工具调用完成',
-    message: '工具 "move" 执行成功，移动到目标位置',
-    timestamp: Date.now() - 600000,
-    read: true,
-  },
-]
 
 const showCallDetailDialog = ref(false)
 
@@ -169,15 +129,31 @@ const formatTimestamp = (timestamp: number) => {
   return new Date(timestamp).toLocaleString('zh-CN')
 }
 
+// 根据工具名称推断分类
+const inferCategory = (toolName: string): string => {
+  const name = toolName.toLowerCase()
+  if (name.includes('move') || name.includes('go') || name.includes('walk')) return 'movement'
+  if (name.includes('mine') || name.includes('dig') || name.includes('break')) return 'mining'
+  if (name.includes('craft') || name.includes('make') || name.includes('build')) return 'crafting'
+  if (name.includes('chat') || name.includes('say') || name.includes('talk')) return 'chat'
+  if (name.includes('attack') || name.includes('fight') || name.includes('combat')) return 'combat'
+  if (name.includes('inventory') || name.includes('item') || name.includes('drop'))
+    return 'inventory'
+  if (name.includes('look') || name.includes('see') || name.includes('observe'))
+    return 'observation'
+  return 'basic_control'
+}
+
 // 加载工具列表
 const loadTools = async () => {
   try {
     loading.value = true
     const response = await mcpApi.getTools()
-    // 为没有 enabled 字段的工具设置默认启用状态
+    // 为MCP原始数据添加前端需要的字段
     tools.value = response.tools.map((tool) => ({
       ...tool,
-      enabled: tool.enabled !== false, // 如果没有 enabled 字段或不为 false，则默认为 true
+      category: tool.category || inferCategory(tool.name), // 如果没有category，根据名称推断
+      enabled: tool.enabled !== false, // 默认启用
     }))
   } catch (error) {
     ElMessage.error('加载工具列表失败')
@@ -202,8 +178,6 @@ const loadTools = async () => {
           },
           required: ['position'],
         },
-        category: 'movement',
-        enabled: true,
       },
       {
         name: 'mine_block',
@@ -217,44 +191,29 @@ const loadTools = async () => {
           },
           required: ['name'],
         },
-        category: 'mining',
-        enabled: true,
       },
     ]
-    // 为模拟数据也应用同样的处理逻辑
+    // 为模拟数据也添加前端字段
     tools.value = fallbackTools.map((tool) => ({
       ...tool,
-      enabled: tool.enabled !== false,
+      category: inferCategory(tool.name),
+      enabled: true,
     }))
   } finally {
     loading.value = false
   }
 }
 
-// 加载调用历史
-const loadCallHistory = async () => {
+// 加载调用历史（从本地存储）
+const loadCallHistory = () => {
   try {
     historyLoading.value = true
-    const response = await mcpApi.getToolCalls({ limit: 20 })
-    callHistory.value = response.calls
+    // 从本地存储加载历史记录
+    callHistory.value = mcpApi.getLocalHistory()
   } catch (error) {
     ElMessage.error('加载调用历史失败')
     console.error(error)
-    // 如果API调用失败，使用模拟数据作为fallback
-    callHistory.value = [
-      {
-        call_id: 'call_001',
-        tool_name: 'move',
-        parameters: { position: { x: 123.5, y: 64.0, z: -456.8 } },
-        status: 'success',
-        timestamp: Date.now() - 3600000,
-        execution_time: 2.5,
-        result: {
-          content: [{ type: 'text', text: '成功移动到位置 (123.5, 64.0, -456.8)' }],
-          is_error: false,
-        },
-      },
-    ]
+    callHistory.value = []
   } finally {
     historyLoading.value = false
   }
@@ -272,38 +231,66 @@ const handleToolSelected = (tool: MCPTool | null) => {
 
 // 处理工具执行
 const handleRunTool = async (tool: MCPTool, params: Record<string, any>) => {
+  const startTime = Date.now()
+  const callId = `call_${startTime}_${Math.random().toString(36).substr(2, 9)}`
+
   try {
     executing.value = true
 
     // 提取执行选项
     const { _async, _timeout, ...toolParams } = params
 
-    const result = await mcpApi.callTool(tool.name, toolParams)
+    // 调用API
+    const response = await mcpApi.callTool(tool.name, toolParams)
+    const endTime = Date.now()
+    const executionTime = (endTime - startTime) / 1000
 
-    ElMessage.success(`工具 ${tool.name} 执行成功`)
+    // 创建历史记录
+    const toolCall = {
+      call_id: callId,
+      tool_name: tool.name,
+      parameters: toolParams,
+      status: response.result.is_error ? 'error' : 'success',
+      timestamp: startTime,
+      execution_time: executionTime,
+      result: response.result,
+    } as ToolCall
 
-    // 添加成功通知
-    addNotification({
-      type: 'success',
-      title: '工具执行成功',
-      message: `工具 "${tool.name}" 执行完成`,
-      timestamp: Date.now(),
-      read: false,
-    })
+    // 保存到本地历史
+    mcpApi.saveToHistory(toolCall)
 
-    loadCallHistory() // 刷新历史
+    if (response.result.is_error) {
+      ElMessage.error(`工具 ${tool.name} 执行失败`)
+    } else {
+      ElMessage.success(`工具 ${tool.name} 执行成功`)
+    }
+
+    loadCallHistory() // 刷新历史显示
   } catch (error) {
     ElMessage.error(`工具 ${tool.name} 执行失败`)
     console.error('工具执行失败:', error)
 
-    // 添加错误通知
-    addNotification({
-      type: 'error',
-      title: '工具执行失败',
-      message: `工具 "${tool.name}" 执行出错: ${error}`,
-      timestamp: Date.now(),
-      read: false,
-    })
+    const endTime = Date.now()
+    const executionTime = (endTime - startTime) / 1000
+
+    // 创建错误历史记录
+    const errorCall = {
+      call_id: callId,
+      tool_name: tool.name,
+      parameters: params,
+      status: 'error',
+      timestamp: startTime,
+      execution_time: executionTime,
+      result: {
+        content: [{ type: 'text', text: `执行失败: ${error}` }],
+        structured_content: null,
+        is_error: true,
+      },
+    } as ToolCall
+
+    // 保存错误记录到本地历史
+    mcpApi.saveToHistory(errorCall)
+    loadCallHistory() // 刷新历史显示
   } finally {
     executing.value = false
   }
@@ -315,53 +302,12 @@ const clearHistory = async () => {
     await ElMessageBox.confirm('确定要清空所有历史记录吗？', '确认操作', {
       type: 'warning',
     })
+    // 清空本地存储的历史记录
+    mcpApi.clearLocalHistory()
     callHistory.value = []
     ElMessage.success('历史记录已清空')
   } catch {
     // 用户取消操作
-  }
-}
-
-// 清空通知
-const clearNotifications = async () => {
-  try {
-    await ElMessageBox.confirm('确定要清空所有通知吗？', '确认操作', {
-      type: 'warning',
-    })
-    notifications.value = []
-    ElMessage.success('通知已清空')
-  } catch {
-    // 用户取消操作
-  }
-}
-
-// 标记通知为已读
-const markNotificationRead = (notification: MCPNotification) => {
-  const index = notifications.value.findIndex((n) => n.id === notification.id)
-  if (index !== -1) {
-    notifications.value[index].read = true
-  }
-}
-
-// 标记所有通知为已读
-const markAllNotificationsRead = () => {
-  notifications.value.forEach((notification) => {
-    notification.read = true
-  })
-  ElMessage.success('所有通知已标记为已读')
-}
-
-// 添加通知
-const addNotification = (notification: Omit<MCPNotification, 'id'>) => {
-  const newNotification: MCPNotification = {
-    ...notification,
-    id: Date.now().toString(),
-  }
-  notifications.value.unshift(newNotification)
-
-  // 限制通知数量，最多保留50条
-  if (notifications.value.length > 50) {
-    notifications.value = notifications.value.slice(0, 50)
   }
 }
 
@@ -415,20 +361,7 @@ onMounted(() => {
   min-height: 200px;
   max-height: 400px;
   border-top: 1px solid #e6e6e6;
-  display: flex;
   background: #fff;
-}
-
-.history-section {
-  flex: 1;
-  min-width: 0;
-}
-
-.notification-section {
-  width: 350px;
-  min-width: 300px;
-  max-width: 500px;
-  border-left: 1px solid #e6e6e6;
 }
 
 /* 调用详情对话框样式 */
@@ -500,15 +433,8 @@ onMounted(() => {
   }
 
   .bottom-panel {
-    flex-direction: column;
     height: auto;
     min-height: 200px;
-  }
-
-  .notification-section {
-    width: 100%;
-    border-left: none;
-    border-top: 1px solid #e6e6e6;
   }
 }
 </style>

@@ -38,8 +38,8 @@ const getApiConfig = () => {
         baseURL: `http://${settingsStore.settings.api.host}:${settingsStore.settings.api.port}/api`,
         timeout: settingsStore.settings.api.timeout,
         retry: {
-          maxRetries: settingsStore.settings.api.maxRetries,
-          retryDelay: settingsStore.settings.api.retryDelay,
+          maxRetries: 3, // 默认重试3次
+          retryDelay: 1000, // 默认重试延迟1秒
           retryCondition: (error: any) => {
             // 默认重试条件：网络错误或超时
             return (

@@ -8,7 +8,7 @@ import type {
   ResponseInterceptor,
 } from '../types/api'
 import { HttpStatusCode } from '../types/api'
-import { API_CONFIG, validateApiConfig } from '../config/api.config'
+import { getAPIConfig, validateApiConfig } from '../config/api.config'
 import { globalErrorHandler } from './errorHandler'
 import { interceptorManager } from './interceptors'
 
