@@ -18,6 +18,14 @@
         @toggle-stats="toggleStats"
         @resume-auto-scroll="resumeAutoScroll"
       />
+
+      <!-- 测试按钮（仅开发环境显示） -->
+      <div v-if="true" class="test-controls" style="margin-top: 10px">
+        <el-button size="small" @click="addTestLogs" type="primary"> 添加测试日志 </el-button>
+        <span style="margin-left: 10px; font-size: 12px; color: #666">
+          模块数量: {{ availableModules.length }} | 日志数量: {{ logs.length }}
+        </span>
+      </div>
     </div>
 
     <!-- 筛选器 -->
@@ -147,7 +155,6 @@ const selectedModules = ref<string[]>([]) // 空数组表示全选所有模块
 const showSettings = ref(false)
 const logsContainer = ref<HTMLElement>()
 const expandedLogs = ref<Record<number, boolean>>({})
-const dynamicModules = ref<Set<string>>(new Set())
 
 // 频率限制相关
 const logTimestamps = ref<number[]>([])
@@ -251,7 +258,15 @@ const filteredLogs = computed(() => {
 })
 
 const availableModules = computed(() => {
-  return Array.from(dynamicModules.value).sort()
+  // 从日志数据中动态提取所有模块
+  const modules = new Set<string>()
+  logs.value.forEach((log) => {
+    if (log.module) {
+      modules.add(log.module)
+    }
+  })
+  const moduleArray = Array.from(modules).sort()
+  return moduleArray
 })
 
 // 工具函数
@@ -550,12 +565,6 @@ const handleMessage = (data: WebSocketMessage) => {
           break
         }
 
-        // 动态注册新模块
-        if (!dynamicModules.value.has(data.module)) {
-          dynamicModules.value.add(data.module)
-          console.log(`新模块已注册: ${data.module}`)
-        }
-
         const newLogEntry: LogEntry = {
           timestamp: data.timestamp,
           level: data.level,
@@ -657,7 +666,6 @@ const clearLogs = async () => {
     }
 
     expandedLogs.value = {}
-    dynamicModules.value.clear()
     logTimestamps.value = []
     rateLimitedCount.value = 0
     userScrolledUp.value = false
@@ -666,6 +674,44 @@ const clearLogs = async () => {
   } catch {
     // 用户取消操作
   }
+}
+
+// 添加测试日志数据（用于开发测试）
+const addTestLogs = () => {
+  const { addLogEntry, addMCPLogEntry } = useWebSocketData()
+  const testModules = [
+    'minecraft.server',
+    'minecraft.world',
+    'minecraft.player',
+    'minecraft.network',
+  ]
+  const testLevels = ['INFO', 'WARNING', 'ERROR']
+  const testMessages = [
+    '玩家加入游戏',
+    '世界数据更新',
+    '网络连接建立',
+    '命令执行完成',
+    '内存使用警告',
+    '配置文件重载',
+  ]
+
+  // 添加10条测试日志
+  for (let i = 0; i < 10; i++) {
+    const testLog = {
+      timestamp: Date.now() - Math.random() * 10000, // 随机时间戳
+      level: testLevels[Math.floor(Math.random() * testLevels.length)],
+      module: testModules[Math.floor(Math.random() * testModules.length)],
+      message: testMessages[Math.floor(Math.random() * testMessages.length)],
+    }
+
+    if (props.wsUrl.includes('mcp-logs')) {
+      addMCPLogEntry(testLog)
+    } else {
+      addLogEntry(testLog)
+    }
+  }
+
+  ElMessage.success('已添加10条测试日志')
 }
 
 const applySettings = () => {

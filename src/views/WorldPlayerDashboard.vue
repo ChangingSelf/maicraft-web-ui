@@ -129,20 +129,20 @@
                 <div class="stats-list">
                   <ProgressCard
                     label="生命值"
-                    :current-value="playerData.health || 0"
-                    :max-value="playerData.max_health || 20"
+                    :current-value="Number(playerData.health?.toFixed(0) || 0)"
+                    :max-value="Number(playerData.max_health?.toFixed(0) || 20)"
                   />
                   <ProgressCard
                     label="饥饿值"
-                    :current-value="playerData.food || 0"
-                    :max-value="playerData.max_food || 20"
+                    :current-value="Number(playerData.food?.toFixed(0) || 0)"
+                    :max-value="Number(playerData.max_food?.toFixed(0) || 20)"
                   />
                   <ProgressCard
                     label="经验值"
-                    :current-value="playerData.experience || 0"
-                    :max-value="getMaxExperienceForLevel(playerData.level || 0)"
+                    :current-value="Number(playerData.experience?.toFixed(0) || 0)"
+                    :max-value="getMaxExperienceForLevel(Number(playerData.level?.toFixed(0) || 0))"
                     :show-level="true"
-                    :level="playerData.level || 0"
+                    :level="Number(playerData.level?.toFixed(0) || 0)"
                   />
                 </div>
 
