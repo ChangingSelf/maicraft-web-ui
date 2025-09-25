@@ -5,8 +5,7 @@ import MCPServerLogViewer from '../views/MCPServerLogViewer.vue'
 import EventViewer from '../views/EventViewer.vue'
 import MCPTools from '../views/MCPTools.vue'
 import Settings from '../views/Settings.vue'
-import WorldInfo from '../views/WorldInfo.vue'
-import PlayerStatus from '../views/PlayerStatus.vue'
+import WorldPlayerDashboard from '../views/WorldPlayerDashboard.vue'
 import Changelog from '../views/Changelog.vue'
 import TokenUsage from '../views/TokenUsage.vue'
 import TaskManager from '../views/TaskManager.vue'
@@ -89,19 +88,11 @@ const router = createRouter({
     },
     // 游戏监控相关路由
     {
-      path: '/game-monitoring/world-info',
-      name: 'world-info',
-      component: WorldInfo,
+      path: '/game-monitoring/world-player-dashboard',
+      name: 'world-player-dashboard',
+      component: WorldPlayerDashboard,
       meta: {
-        title: '世界信息',
-      },
-    },
-    {
-      path: '/game-monitoring/player-status',
-      name: 'player-status',
-      component: PlayerStatus,
-      meta: {
-        title: '玩家状态',
+        title: '世界与玩家状态',
       },
     },
     // 版本信息页面

@@ -51,14 +51,12 @@
         </el-menu-item>
 
         <!-- 游戏监控 -->
-        <el-sub-menu index="game-monitoring">
+        <el-menu-item index="game-world-player-dashboard">
+          <el-icon><Monitor /></el-icon>
           <template #title>
-            <el-icon><Monitor /></el-icon>
-            <span>游戏监控</span>
+            <span>游戏状态</span>
           </template>
-          <el-menu-item index="game-world-info">世界信息</el-menu-item>
-          <el-menu-item index="game-player-status">玩家状态</el-menu-item>
-        </el-sub-menu>
+        </el-menu-item>
 
         <!-- MCP 工具管理 -->
         <el-menu-item index="mcp-tools">
@@ -298,6 +296,7 @@ const activeIndex = computed(() => {
   if (path.startsWith('/server')) return 'server'
   if (path.startsWith('/players')) return 'players'
   if (path.startsWith('/monitoring')) return 'monitoring'
+  if (path === '/game-monitoring/world-player-dashboard') return 'game-world-player-dashboard'
   if (path.startsWith('/game-monitoring')) return 'game-monitoring'
   if (path.startsWith('/debug-tools')) return 'debug-tools'
   if (path === '/websocket-monitor') return 'websocket-monitor'
@@ -434,11 +433,8 @@ const handleSelect = (index: string) => {
     case 'monitoring-alerts':
       router.push('/monitoring/alerts')
       break
-    case 'game-world-info':
-      router.push('/game-monitoring/world-info')
-      break
-    case 'game-player-status':
-      router.push('/game-monitoring/player-status')
+    case 'game-world-player-dashboard':
+      router.push('/game-monitoring/world-player-dashboard')
       break
     case 'mcp-tools':
       router.push('/mcp-tools')
