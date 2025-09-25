@@ -32,7 +32,9 @@
       :module-stats="moduleStats"
       :total-logs="logs.length"
       :rate-limited-count="rateLimitedCount"
-      :logs="logs"
+      :logs="
+        logs.map((log) => ({ timestamp: log.timestamp, module: log.module, count: log.count }))
+      "
     />
 
     <!-- 日志显示区域 -->
@@ -100,13 +102,14 @@ defineOptions({
 
 // 类型定义
 interface LogEntry {
-  timestamp: number
+  timestamp: number | string
   level: string
   module: string
   message: string
   count?: number
-  lastTimestamp?: number
+  lastTimestamp?: number | string
   merged?: boolean
+  formatted_timestamp?: string
 }
 
 interface WebSocketMessage {
@@ -177,9 +180,12 @@ const filterConfigs = computed(() => [
   {
     key: 'modules',
     label: '模块',
-    options: availableModules.value.map((module) => ({ value: module, label: module })),
+    options:
+      availableModules.value.length > 0
+        ? availableModules.value.map((module) => ({ value: module, label: module }))
+        : [{ value: '__ALL__', label: '暂无模块数据' }],
     selectedValues: selectedModules.value,
-    showSelectAll: true,
+    showSelectAll: availableModules.value.length > 0,
   },
 ])
 
@@ -200,41 +206,48 @@ const settings = ref({
 
 // 计算属性
 const filteredLogs = computed(() => {
-  return logs.value.filter((log) => {
-    // 日志级别过滤逻辑
-    let levelMatch = false
-    if (selectedLevels.value.length === 0) {
-      // 空数组：显示所有日志（全选）
-      levelMatch = true
-    } else if (selectedLevels.value.length === 1 && selectedLevels.value[0] === '__NONE__') {
-      // 特殊值：不显示任何日志
-      levelMatch = false
-    } else if (selectedLevels.value.length === availableLevels.length) {
-      // 选择了所有级别：显示所有日志
-      levelMatch = true
-    } else {
-      // 选择了部分级别：只显示匹配的日志
-      levelMatch = selectedLevels.value.includes(log.level)
-    }
+  return logs.value
+    .filter((log) => {
+      // 日志级别过滤逻辑
+      let levelMatch = false
+      if (selectedLevels.value.length === 0) {
+        // 空数组：显示所有日志（全选）
+        levelMatch = true
+      } else if (selectedLevels.value.length === 1 && selectedLevels.value[0] === '__NONE__') {
+        // 特殊值：不显示任何日志
+        levelMatch = false
+      } else if (selectedLevels.value.length === availableLevels.length) {
+        // 选择了所有级别：显示所有日志
+        levelMatch = true
+      } else {
+        // 选择了部分级别：只显示匹配的日志
+        levelMatch = selectedLevels.value.includes(log.level)
+      }
 
-    // 模块过滤逻辑
-    let moduleMatch = false
-    if (selectedModules.value.length === 0) {
-      // 空数组：显示所有日志（全选）
-      moduleMatch = true
-    } else if (selectedModules.value.length === 1 && selectedModules.value[0] === '__NONE__') {
-      // 特殊值：不显示任何日志
-      moduleMatch = false
-    } else if (selectedModules.value.length === availableModules.value.length) {
-      // 选择了所有模块：显示所有日志
-      moduleMatch = true
-    } else {
-      // 选择了部分模块：只显示匹配的日志
-      moduleMatch = selectedModules.value.includes(log.module)
-    }
+      // 模块过滤逻辑
+      let moduleMatch = false
+      if (selectedModules.value.length === 0) {
+        // 空数组：显示所有日志（全选）
+        moduleMatch = true
+      } else if (selectedModules.value.length === 1 && selectedModules.value[0] === '__NONE__') {
+        // 特殊值：不显示任何日志
+        moduleMatch = false
+      } else if (selectedModules.value.length === availableModules.value.length) {
+        // 选择了所有模块：显示所有日志
+        moduleMatch = true
+      } else {
+        // 选择了部分模块：只显示匹配的日志
+        moduleMatch = selectedModules.value.includes(log.module)
+      }
 
-    return levelMatch && moduleMatch
-  })
+      return levelMatch && moduleMatch
+    })
+    .sort((a, b) => {
+      // 按时间戳排序，最旧的在前，最新的在后
+      const aTime = typeof a.timestamp === 'number' ? a.timestamp : parseInt(String(a.timestamp))
+      const bTime = typeof b.timestamp === 'number' ? b.timestamp : parseInt(String(b.timestamp))
+      return aTime - bTime
+    })
 })
 
 const availableModules = computed(() => {
@@ -287,7 +300,11 @@ const detectSpam = (): boolean => {
   }
 
   lastScrollCheck.value = now
-  const recentLogs = logs.value.filter((log) => now - log.timestamp < 1000)
+  const recentLogs = logs.value.filter((log) => {
+    const logTime =
+      typeof log.timestamp === 'number' ? log.timestamp : parseInt(String(log.timestamp))
+    return now - logTime < 1000
+  })
 
   if (recentLogs.length >= spamDetectionThreshold.value) {
     return true // 检测到刷屏
@@ -372,7 +389,9 @@ const getLogFrequency = (module?: string): number => {
 
   const recentLogs = logs.value.filter((log) => {
     const matchesModule = !module || log.module === module
-    const isRecent = log.timestamp > oneMinuteAgo
+    const logTime =
+      typeof log.timestamp === 'number' ? log.timestamp : parseInt(String(log.timestamp))
+    const isRecent = logTime > oneMinuteAgo
     return matchesModule && isRecent
   })
 
@@ -547,16 +566,19 @@ const handleMessage = (data: WebSocketMessage) => {
         // 检查是否启用日志合并
         if (settings.value.enableLogMerge) {
           // 查找是否已存在相同的日志
-          const existingIndex = logs.value.findIndex(
-            (log) =>
-              !log.merged &&
-              log.level === newLogEntry.level &&
-              log.module === newLogEntry.module &&
-              log.message === newLogEntry.message &&
-              data.timestamp &&
-              log.timestamp &&
-              data.timestamp - log.timestamp <= settings.value.mergeInterval,
-          )
+          const existingIndex = logs.value.findIndex((log) => {
+            if (log.merged) return false
+            if (log.level !== newLogEntry.level) return false
+            if (log.module !== newLogEntry.module) return false
+            if (log.message !== newLogEntry.message) return false
+
+            const dataTime =
+              typeof data.timestamp === 'number' ? data.timestamp : parseInt(String(data.timestamp))
+            const logTime =
+              typeof log.timestamp === 'number' ? log.timestamp : parseInt(String(log.timestamp))
+
+            return dataTime && logTime && dataTime - logTime <= settings.value.mergeInterval
+          })
 
           if (existingIndex !== -1) {
             // 合并到现有日志
@@ -568,12 +590,12 @@ const handleMessage = (data: WebSocketMessage) => {
           }
         }
 
-        // 添加新日志
-        logs.value.push(newLogEntry)
-
-        // 限制日志数量，保留最新的日志
-        if (logs.value.length > settings.value.maxLogs) {
-          logs.value = logs.value.slice(-settings.value.maxLogs)
+        // 添加新日志（由store处理数量限制）
+        const { addLogEntry, addMCPLogEntry } = useWebSocketData()
+        if (props.wsUrl.includes('mcp-logs')) {
+          addMCPLogEntry(newLogEntry)
+        } else {
+          addLogEntry(newLogEntry)
         }
 
         // 智能自动滚动到底部
@@ -625,7 +647,15 @@ const clearLogs = async () => {
       cancelButtonText: '取消',
       type: 'warning',
     })
-    logs.value = []
+
+    // 使用store的clearEndpointData函数清空日志
+    const { clearEndpointData } = useWebSocketData()
+    if (props.wsUrl.includes('mcp-logs')) {
+      clearEndpointData('LOGS_ALT')
+    } else {
+      clearEndpointData('LOGS')
+    }
+
     expandedLogs.value = {}
     dynamicModules.value.clear()
     logTimestamps.value = []

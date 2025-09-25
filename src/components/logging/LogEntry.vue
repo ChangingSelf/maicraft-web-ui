@@ -44,13 +44,14 @@ import { ArrowDown, ArrowUp } from '@element-plus/icons-vue'
 
 // Props定义
 interface LogEntry {
-  timestamp: number
+  timestamp: number | string
   level: string
   module: string
   message: string
   count?: number
-  lastTimestamp?: number
+  lastTimestamp?: number | string
   merged?: boolean
+  formatted_timestamp?: string
 }
 
 interface Props {

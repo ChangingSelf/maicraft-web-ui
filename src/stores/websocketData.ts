@@ -248,7 +248,7 @@ export const addLogEntry = (entry: LogEntry) => {
     formatted_timestamp: new Date(entry.timestamp).toLocaleString('zh-CN'),
   }
 
-  websocketDataStore.logs.unshift(formattedEntry)
+  websocketDataStore.logs.push(formattedEntry)
 
   // 限制日志数量，保留最新的1000条
   if (websocketDataStore.logs.length > 1000) {
@@ -272,7 +272,7 @@ export const addMCPLogEntry = (entry: LogEntry) => {
     formatted_timestamp: new Date(entry.timestamp).toLocaleString('zh-CN'),
   }
 
-  websocketDataStore.mcpLogs.unshift(formattedEntry)
+  websocketDataStore.mcpLogs.push(formattedEntry)
 
   // 限制日志数量，保留最新的1000条
   if (websocketDataStore.mcpLogs.length > 1000) {

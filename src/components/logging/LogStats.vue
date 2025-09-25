@@ -50,7 +50,7 @@ interface Props {
   totalLogs: number
   rateLimitedCount: number
   logs: Array<{
-    timestamp: number
+    timestamp: number | string
     module: string
     count?: number
   }>
