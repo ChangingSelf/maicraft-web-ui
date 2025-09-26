@@ -1,17 +1,28 @@
 {
-  "current": "0.19.1",
+  "current": "0.19.2",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
   "buildDate": "2025-09-26",
-  "buildTime": "22:24:59",
+  "buildTime": "23:10:15",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
     "lastUpdated": "2025-09-26",
-    "totalVersions": 32,
+    "totalVersions": 33,
     "versions": [
+      {
+        "version": "0.19.2",
+        "date": "2025-09-26",
+        "type": "patch",
+        "changes": {
+          "feat": [
+            "增强日志查看器的筛选和搜索功能，添加回到顶部和回到底部按钮"
+          ]
+        },
+        "summary": "✨ 新功能 - 增强日志查看器的筛选和搜索功能，添加回到顶部和回到底部按钮"
+      },
       {
         "version": "0.19.1",
         "date": "2025-09-26",
