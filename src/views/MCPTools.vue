@@ -238,7 +238,7 @@ const handleRunTool = async (tool: MCPTool, params: Record<string, any>) => {
     executing.value = true
 
     // 提取执行选项
-    const { _async, _timeout, ...toolParams } = params
+    const { _timeout, ...toolParams } = params
 
     // 调用API
     const response = await mcpApi.callTool(tool.name, toolParams)

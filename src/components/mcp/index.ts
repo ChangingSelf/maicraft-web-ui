@@ -17,6 +17,5 @@ export interface MCPNotification {
 // 工具执行参数接口
 export interface ToolExecutionParams {
   [key: string]: any
-  _async?: boolean
   _timeout?: number
 }

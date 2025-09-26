@@ -36,7 +36,7 @@
             ref="formRef"
             :model="formData"
             :rules="formRules"
-            label-width="120px"
+            label-width="auto"
             size="default"
           >
             <el-form-item
@@ -118,29 +118,6 @@
                 :placeholder="paramInfo.description"
                 clearable
               />
-
-              <div v-if="paramInfo.description" class="param-description">
-                {{ paramInfo.description }}
-              </div>
-            </el-form-item>
-
-            <!-- 执行选项 -->
-            <el-divider content-position="left">执行选项</el-divider>
-
-            <el-form-item label="异步执行">
-              <el-switch v-model="formData._async" />
-              <span class="option-description">启用后工具将在后台异步执行</span>
-            </el-form-item>
-
-            <el-form-item label="超时时间">
-              <el-input-number
-                v-model="formData._timeout"
-                :min="1"
-                :max="300"
-                style="width: 200px"
-                controls-position="right"
-              />
-              <span class="option-description">秒</span>
             </el-form-item>
           </el-form>
         </div>
@@ -148,7 +125,19 @@
 
       <!-- 执行按钮区域 -->
       <div class="tool-footer">
-        <el-button @click="resetForm">重置表单</el-button>
+        <div class="footer-left">
+          <span class="timeout-label">超时时间：</span>
+          <el-input-number
+            v-model="formData._timeout"
+            :min="1"
+            :max="300"
+            size="small"
+            style="width: 100px"
+            controls-position="right"
+          />
+          <span class="timeout-unit">秒</span>
+          <el-button @click="resetForm" size="small">重置表单</el-button>
+        </div>
         <el-button
           type="primary"
           :loading="executing"
@@ -186,7 +175,6 @@ const emit = defineEmits<Emits>()
 // 表单引用和数据
 const formRef = ref<FormInstance>()
 const formData = reactive<Record<string, any>>({
-  _async: false,
   _timeout: 30,
 })
 
@@ -225,8 +213,8 @@ const isRequired = (paramName: string): boolean => {
 }
 
 // 获取分类标签
-const getCategoryLabel = (category: string): string => {
-  return categoryLabels[category] || category
+const getCategoryLabel = (category: string | undefined): string => {
+  return category ? categoryLabels[category] || category : '未分类'
 }
 
 // 重置表单
@@ -292,7 +280,6 @@ const handleExecute = async () => {
     }
 
     // 添加执行选项
-    params._async = formData._async
     params._timeout = formData._timeout
 
     emit('run-tool', props.tool, params)
@@ -394,13 +381,11 @@ watch(
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.param-description {
-  margin-top: 4px;
-  color: #999;
-  font-size: 12px;
-  line-height: 1.4;
+  word-break: break-word;
+  white-space: normal;
+  min-width: 0;
+  flex-shrink: 1;
+  max-width: 200px;
 }
 
 .boolean-field {
@@ -425,12 +410,29 @@ watch(
   border-top: 1px solid #e6e6e6;
   background: #fafafa;
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: center;
   flex-shrink: 0;
   position: sticky;
   bottom: 0;
   z-index: 10;
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeout-label {
+  color: #666;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.timeout-unit {
+  color: #999;
+  font-size: 12px;
 }
 
 /* 滚动条样式 */
