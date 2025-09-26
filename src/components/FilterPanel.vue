@@ -16,8 +16,8 @@
 
         <!-- 复选框组 -->
         <el-checkbox-group
-          v-model="filter.selectedValues"
-          @change="handleSelectionChange(filter)"
+          :model-value="getDisplaySelectedValues(filter)"
+          @change="(values) => handleCheckboxChange(filter, values)"
           size="small"
           class="checkbox-group"
         >
@@ -71,6 +71,20 @@ const isAllSelected = (filter: FilterConfig): boolean => {
   )
 }
 
+// 计算实际用于显示的选中值（解决空数组全选显示问题）
+const getDisplaySelectedValues = (filter: FilterConfig): string[] => {
+  // 如果是空数组（表示全选），返回所有选项的值用于显示
+  if (filter.selectedValues.length === 0) {
+    return filter.options.map((option) => option.value)
+  }
+  // 如果是特殊的"不选择任何"值，返回空数组
+  if (filter.selectedValues.length === 1 && filter.selectedValues[0] === '__NONE__') {
+    return []
+  }
+  // 其他情况返回原值
+  return filter.selectedValues
+}
+
 const isNoneSelected = (filter: FilterConfig): boolean => {
   // 使用特殊字符串表示不显示任何
   return filter.selectedValues.length === 1 && filter.selectedValues[0] === '__NONE__'
@@ -88,6 +102,21 @@ const toggleAllSelection = (filter: FilterConfig) => {
   handleSelectionChange(filter)
 }
 
+const handleCheckboxChange = (filter: FilterConfig, values: string[]) => {
+  // 更新实际的选中值
+  if (values.length === 0) {
+    // 如果没有选中任何项，设置为特殊值表示不显示任何
+    filter.selectedValues = ['__NONE__']
+  } else if (values.length === filter.options.length) {
+    // 如果选中了所有项，设置为空数组表示全选
+    filter.selectedValues = []
+  } else {
+    // 选中了部分项，直接使用选中的值
+    filter.selectedValues = values
+  }
+  emit('change', filter.key, filter.selectedValues)
+}
+
 const handleSelectionChange = (filter: FilterConfig) => {
   emit('change', filter.key, filter.selectedValues)
 }
@@ -102,50 +131,51 @@ defineExpose({
 <style scoped>
 .filter-panel {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  gap: 24px;
+  align-items: flex-start;
 }
 
 .filter-section {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
 }
 
 .filter-label {
   font-weight: 500;
   color: #666;
-  min-width: 80px;
-  margin-top: 4px;
+  font-size: 13px;
   white-space: nowrap;
+  min-width: 60px;
 }
 
 .filter-content {
-  flex: 1;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
 .select-all-btn {
-  align-self: flex-start;
   color: #409eff;
-  font-size: 12px;
-  padding: 4px 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  transition: all 0.2s;
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid #409eff;
+  border-radius: 3px;
+  background: white;
+  transition: all 0.2s ease;
+  height: 24px;
+  line-height: 1;
 }
 
 .select-all-btn:hover {
-  border-color: #409eff;
-  background-color: #ecf5ff;
+  background-color: #409eff;
+  color: white;
 }
 
 .checkbox-group {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 16px;
+  gap: 4px 8px;
 }
 
 .checkbox-group :deep(.el-checkbox) {
@@ -153,7 +183,12 @@ defineExpose({
 }
 
 .checkbox-group :deep(.el-checkbox__label) {
-  padding-left: 6px;
+  padding-left: 4px;
+  font-size: 12px;
+}
+
+.checkbox-group :deep(.el-checkbox__input) {
+  margin-right: 4px;
 }
 
 /* 响应式设计 */

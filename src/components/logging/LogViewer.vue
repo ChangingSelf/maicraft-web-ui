@@ -28,9 +28,88 @@
       </div>
     </div>
 
-    <!-- 筛选器 -->
+    <!-- 筛选器和搜索 -->
     <div class="filters">
-      <FilterPanel :filters="filterConfigs" @change="handleFilterChange" />
+      <div class="filter-container">
+        <!-- 日志级别筛选 -->
+        <div class="filter-item">
+          <label class="filter-label">级别：</label>
+          <el-select
+            v-model="displaySelectedLevels"
+            multiple
+            collapse-tags-tooltip
+            placeholder="选择日志级别"
+            size="small"
+            @change="handleLevelChange"
+          >
+            <template #header>
+              <el-button text size="small" @click="toggleAllLevels" class="select-all-option">
+                {{ isAllLevelsSelected ? '取消全选' : '全选' }}
+              </el-button>
+            </template>
+            <el-option v-for="level in availableLevels" :key="level" :label="level" :value="level">
+              <span class="level-option" :class="`level-${level.toLowerCase()}`">
+                {{ level }}
+              </span>
+            </el-option>
+          </el-select>
+        </div>
+
+        <!-- 模块筛选 -->
+        <div class="filter-item">
+          <label class="filter-label">模块：</label>
+          <el-select
+            v-model="displaySelectedModules"
+            multiple
+            collapse-tags
+            collapse-tags-tooltip
+            placeholder="选择模块"
+            size="small"
+            filterable
+            class="module-select"
+            @change="handleModuleChange"
+          >
+            <template #header>
+              <el-button text size="small" @click="toggleAllModules" class="select-all-option">
+                {{ isAllModulesSelected ? '取消全选' : '全选' }}
+              </el-button>
+            </template>
+            <el-option
+              v-for="module in availableModules"
+              :key="module"
+              :label="module"
+              :value="module"
+            />
+          </el-select>
+        </div>
+
+        <!-- 搜索区域 -->
+        <div class="search-section">
+          <el-input
+            v-model="searchQuery"
+            placeholder="搜索日志内容..."
+            class="search-input"
+            size="small"
+            clearable
+            @input="handleSearchInput"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+
+          <el-checkbox
+            v-model="useRegex"
+            @change="handleSearchInput"
+            class="regex-checkbox"
+            size="small"
+          >
+            正则
+          </el-checkbox>
+
+          <div class="search-stats" v-if="searchQuery">{{ searchMatchCount }} 条</div>
+        </div>
+      </div>
     </div>
 
     <!-- 统计面板 -->
@@ -47,10 +126,35 @@
 
     <!-- 日志显示区域 -->
     <div class="logs-container" ref="logsContainer" @scroll="handleScroll">
+      <!-- 导航按钮 -->
+      <div class="navigation-buttons" v-if="filteredLogs.length > 10">
+        <el-button
+          type="primary"
+          size="small"
+          circle
+          @click="scrollToTop"
+          class="nav-btn"
+          title="回到顶部"
+        >
+          <el-icon><ArrowUp /></el-icon>
+        </el-button>
+
+        <el-button
+          type="primary"
+          size="small"
+          circle
+          @click="scrollToBottom"
+          class="nav-btn"
+          title="回到底部"
+        >
+          <el-icon><ArrowDown /></el-icon>
+        </el-button>
+      </div>
       <LogEntry
         v-for="(log, index) in filteredLogs"
         :key="index"
         :log="log"
+        :line-number="index + 1"
         :expanded="expandedLogs[index]"
         @toggle-expand="toggleExpand(index)"
       />
@@ -74,7 +178,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Document } from '@element-plus/icons-vue'
+import { Document, Search, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
 import { useWebSocketData } from '@/stores/websocketData'
 import {
@@ -156,6 +260,54 @@ const showSettings = ref(false)
 const logsContainer = ref<HTMLElement>()
 const expandedLogs = ref<Record<number, boolean>>({})
 
+// 搜索相关
+const searchQuery = ref('')
+const useRegex = ref(false)
+const searchMatchCount = ref(0)
+
+// 显示用的选中值（处理全选逻辑）
+const displaySelectedLevels = computed({
+  get: () => {
+    if (selectedLevels.value.length === 0) {
+      return availableLevels
+    }
+    if (selectedLevels.value.length === 1 && selectedLevels.value[0] === '__NONE__') {
+      return []
+    }
+    return selectedLevels.value
+  },
+  set: (values: string[]) => {
+    // 这里会被 handleLevelChange 处理，不直接设置
+  },
+})
+
+const displaySelectedModules = computed({
+  get: () => {
+    if (selectedModules.value.length === 0) {
+      return availableModules.value
+    }
+    if (selectedModules.value.length === 1 && selectedModules.value[0] === '__NONE__') {
+      return []
+    }
+    return selectedModules.value
+  },
+  set: (values: string[]) => {
+    // 这里会被 handleModuleChange 处理，不直接设置
+  },
+})
+
+// 全选状态检查
+const isAllLevelsSelected = computed(() => {
+  return selectedLevels.value.length === 0 || selectedLevels.value.length === availableLevels.length
+})
+
+const isAllModulesSelected = computed(() => {
+  return (
+    selectedModules.value.length === 0 ||
+    selectedModules.value.length === availableModules.value.length
+  )
+})
+
 // 频率限制相关
 const logTimestamps = ref<number[]>([])
 const rateLimitedCount = ref(0)
@@ -175,26 +327,7 @@ const lastStatsUpdate = ref(0)
 // 配置数据
 const availableLevels = ['TRACE', 'DEBUG', 'INFO', 'SUCCESS', 'WARNING', 'ERROR', 'CRITICAL']
 
-// 筛选器配置
-const filterConfigs = computed(() => [
-  {
-    key: 'logLevels',
-    label: '日志级别',
-    options: availableLevels.map((level) => ({ value: level, label: level })),
-    selectedValues: selectedLevels.value,
-    showSelectAll: true,
-  },
-  {
-    key: 'modules',
-    label: '模块',
-    options:
-      availableModules.value.length > 0
-        ? availableModules.value.map((module) => ({ value: module, label: module }))
-        : [{ value: '__ALL__', label: '暂无模块数据' }],
-    selectedValues: selectedModules.value,
-    showSelectAll: availableModules.value.length > 0,
-  },
-])
+// 注意：filterConfigs 已被新的选择器替代，保留此注释作为参考
 
 // 设置
 const settings = ref({
@@ -211,9 +344,28 @@ const settings = ref({
 // WebSocket管理器（不再需要本地管理器，使用全局管理器）
 // let wsManager: any = null
 
+// 搜索匹配函数
+const isSearchMatch = (log: LogEntry, query: string, useRegex: boolean): boolean => {
+  if (!query.trim()) return true
+
+  const searchText = `${log.message} ${log.module} ${log.level}`.toLowerCase()
+
+  if (useRegex) {
+    try {
+      const regex = new RegExp(query, 'i')
+      return regex.test(searchText)
+    } catch (e) {
+      // 如果正则表达式无效，降级为普通文本搜索
+      return searchText.includes(query.toLowerCase())
+    }
+  } else {
+    return searchText.includes(query.toLowerCase())
+  }
+}
+
 // 计算属性
 const filteredLogs = computed(() => {
-  return logs.value
+  const filtered = logs.value
     .filter((log) => {
       // 日志级别过滤逻辑
       let levelMatch = false
@@ -247,7 +399,10 @@ const filteredLogs = computed(() => {
         moduleMatch = selectedModules.value.includes(log.module)
       }
 
-      return levelMatch && moduleMatch
+      // 搜索匹配逻辑
+      const searchMatch = isSearchMatch(log, searchQuery.value, useRegex.value)
+
+      return levelMatch && moduleMatch && searchMatch
     })
     .sort((a, b) => {
       // 按时间戳排序，最旧的在前，最新的在后
@@ -255,6 +410,11 @@ const filteredLogs = computed(() => {
       const bTime = typeof b.timestamp === 'number' ? b.timestamp : parseInt(String(b.timestamp))
       return aTime - bTime
     })
+
+  // 更新搜索匹配计数
+  searchMatchCount.value = searchQuery.value ? filtered.length : 0
+
+  return filtered
 })
 
 const availableModules = computed(() => {
@@ -476,7 +636,81 @@ const subscribeToLogs = () => {
   console.log('日志订阅已由全局管理器处理')
 }
 
-// 筛选器事件处理
+// 搜索输入处理
+const handleSearchInput = () => {
+  // 搜索功能通过 computed 属性自动响应，这里可以添加防抖逻辑
+  // 目前直接响应，如果性能有问题可以添加 debounce
+}
+
+// 导航功能
+const scrollToTop = () => {
+  if (logsContainer.value) {
+    logsContainer.value.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+}
+
+const scrollToBottom = () => {
+  if (logsContainer.value) {
+    logsContainer.value.scrollTo({
+      top: logsContainer.value.scrollHeight,
+      behavior: 'smooth',
+    })
+  }
+}
+
+// 新的选择器事件处理
+const handleLevelChange = (values: string[]) => {
+  if (values.length === 0) {
+    selectedLevels.value = ['__NONE__']
+  } else if (values.length === availableLevels.length) {
+    selectedLevels.value = []
+  } else {
+    selectedLevels.value = values
+  }
+  if (isConnected.value) {
+    subscribeToLogs()
+  }
+}
+
+const handleModuleChange = (values: string[]) => {
+  if (values.length === 0) {
+    selectedModules.value = ['__NONE__']
+  } else if (values.length === availableModules.value.length) {
+    selectedModules.value = []
+  } else {
+    selectedModules.value = values
+  }
+  if (isConnected.value) {
+    subscribeToLogs()
+  }
+}
+
+const toggleAllLevels = () => {
+  if (isAllLevelsSelected.value) {
+    selectedLevels.value = ['__NONE__']
+  } else {
+    selectedLevels.value = []
+  }
+  if (isConnected.value) {
+    subscribeToLogs()
+  }
+}
+
+const toggleAllModules = () => {
+  if (isAllModulesSelected.value) {
+    selectedModules.value = ['__NONE__']
+  } else {
+    selectedModules.value = []
+  }
+  if (isConnected.value) {
+    subscribeToLogs()
+  }
+}
+
+// 保留原来的方法以保持兼容性
 const handleFilterChange = (filterKey: string, selectedValues: string[]) => {
   if (filterKey === 'logLevels') {
     selectedLevels.value = selectedValues
@@ -497,18 +731,6 @@ const updateSubscription = () => {
 
 // 处理模块选择变化
 const handleModuleSelection = () => {
-  updateSubscription()
-}
-
-// 全选/取消全选模块
-const toggleAllModules = () => {
-  if (selectedModules.value.length === availableModules.value.length) {
-    // 取消全选
-    selectedModules.value = []
-  } else {
-    // 全选所有可用模块
-    selectedModules.value = [...availableModules.value]
-  }
   updateSubscription()
 }
 
@@ -629,12 +851,6 @@ const handleMessage = (data: WebSocketMessage) => {
 
 const scheduleReconnect = () => {
   // 移除自动重连功能，保持手动连接模式
-}
-
-const scrollToBottom = () => {
-  if (logsContainer.value) {
-    logsContainer.value.scrollTop = logsContainer.value.scrollHeight
-  }
 }
 
 // 恢复自动滚动
@@ -787,10 +1003,201 @@ onUnmounted(() => {
 
 .filters {
   background: white;
-  padding: 16px 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-label {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.level-select,
+.module-select {
+  min-width: 120px;
+}
+
+.level-select {
+  width: 160px;
+}
+
+.module-select {
+  width: 200px;
+}
+
+.select-all-option {
+  width: 100%;
+  justify-content: center;
+  border-bottom: 1px solid #e4e7ed;
+  border-radius: 0;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+}
+
+.level-option {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.level-option.level-trace {
+  background-color: #f0f0f0;
+  color: #666;
+}
+
+.level-option.level-debug {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.level-option.level-info {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.level-option.level-success {
+  background-color: #f6ffed;
+  color: #52c41a;
+}
+
+.level-option.level-warning {
+  background-color: #fffbe6;
+  color: #faad14;
+}
+
+.level-option.level-error {
+  background-color: #fff2f0;
+  color: #ff4d4f;
+}
+
+.level-option.level-critical {
+  background-color: #ffe6e6;
+  color: #cf1322;
+}
+
+.search-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 200px;
+}
+
+.regex-checkbox {
+  white-space: nowrap;
+}
+
+.regex-checkbox :deep(.el-checkbox__label) {
+  font-size: 12px;
+}
+
+.search-stats {
+  font-size: 11px;
+  color: #666;
+  padding: 2px 6px;
+  background: #e3f2fd;
+  border-radius: 3px;
+  white-space: nowrap;
+  min-width: 40px;
+  text-align: center;
+}
+
+/* 响应式设计 */
+@media (max-width: 1200px) {
+  .filter-container {
+    gap: 16px;
+  }
+
+  .level-select {
+    width: 140px;
+  }
+
+  .module-select {
+    width: 180px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filter-item {
+    justify-content: space-between;
+  }
+
+  .level-select,
+  .module-select {
+    flex: 1;
+    max-width: 300px;
+  }
+
+  .search-section {
+    justify-content: space-between;
+  }
+
+  .search-input {
+    flex: 1;
+    max-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .filters {
+    padding: 8px 12px;
+  }
+
+  .filter-container {
+    gap: 10px;
+  }
+
+  .filter-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-label {
+    margin-bottom: 4px;
+  }
+
+  .level-select,
+  .module-select {
+    width: 100%;
+    max-width: none;
+  }
+
+  .search-section {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .search-input {
+    width: 100%;
+    max-width: none;
+  }
 }
 
 .logs-container {
@@ -801,8 +1208,45 @@ onUnmounted(() => {
   overflow-y: auto;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-  font-size: 14px;
-  line-height: 1.4;
+  position: relative;
+}
+
+.navigation-buttons {
+  position: fixed;
+  right: 30px;
+  bottom: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.nav-btn {
+  width: 40px !important;
+  height: 40px !important;
+  min-width: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-radius: 50% !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.nav-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+}
+
+.nav-btn .el-icon {
+  font-size: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 .no-logs {

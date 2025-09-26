@@ -15,6 +15,10 @@
     </div>
 
     <div class="log-content">
+      <!-- 行号 -->
+      <div v-if="lineNumber" class="log-line-number">
+        {{ lineNumber }}
+      </div>
       <div class="log-time">
         {{ formatTime(log.merged ? log.lastTimestamp! : log.timestamp) }}
       </div>
@@ -56,6 +60,7 @@ interface LogEntry {
 
 interface Props {
   log: LogEntry
+  lineNumber?: number
   expanded?: boolean
 }
 
@@ -145,6 +150,18 @@ defineEmits<{
   display: flex;
   align-items: flex-start;
   gap: 12px;
+}
+
+.log-line-number {
+  color: #999;
+  font-size: 11px;
+  min-width: 40px;
+  text-align: right;
+  margin-right: 8px;
+  padding-right: 8px;
+  border-right: 1px solid #e9ecef;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  user-select: none;
 }
 
 .log-time {
