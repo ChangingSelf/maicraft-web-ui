@@ -16,110 +16,128 @@
         <!-- 移除头部的执行按钮，将在底部固定显示 -->
       </div>
 
-      <!-- 工具描述 -->
-      <div class="tool-section">
-        <h4>描述</h4>
-        <p class="tool-description">{{ tool.description }}</p>
-      </div>
+      <!-- 主要内容区域：左右分栏 -->
+      <div class="main-detail-content">
+        <!-- 左侧：工具信息和参数配置 -->
+        <div class="left-detail-panel">
+          <!-- 工具描述 -->
+          <div class="tool-section">
+            <h4>描述</h4>
+            <p class="tool-description">{{ tool.description }}</p>
+          </div>
 
-      <!-- 工具分类 -->
-      <div class="tool-section">
-        <h4>分类</h4>
-        <el-tag type="primary">{{ getCategoryLabel(tool.category) }}</el-tag>
-      </div>
+          <!-- 工具分类 -->
+          <div class="tool-section">
+            <h4>分类</h4>
+            <el-tag type="primary">{{ getCategoryLabel(tool.category) }}</el-tag>
+          </div>
 
-      <!-- 参数配置 -->
-      <div v-if="tool.inputSchema?.properties" class="tool-section parameters-section">
-        <h4>参数配置</h4>
-        <div class="parameters-form">
-          <el-form
-            ref="formRef"
-            :model="formData"
-            :rules="formRules"
-            label-width="auto"
-            size="default"
-          >
-            <el-form-item
-              v-for="[paramName, paramInfo] in Object.entries(tool.inputSchema.properties)"
-              :key="paramName"
-              :label="paramName"
-              :prop="paramName"
-              :required="isRequired(paramName)"
-            >
-              <template #label>
-                <div class="param-label">
-                  <span>{{ paramName }}</span>
-                  <el-tag size="small" type="info">{{ paramInfo.type }}</el-tag>
-                  <el-tag v-if="isRequired(paramName)" size="small" type="warning"> 必需 </el-tag>
-                </div>
-              </template>
-
-              <!-- 字符串输入 -->
-              <el-input
-                v-if="paramInfo.type === 'string'"
-                v-model="formData[paramName]"
-                :placeholder="paramInfo.description"
-                clearable
-              />
-
-              <!-- 数字输入 -->
-              <el-input-number
-                v-else-if="paramInfo.type === 'number' || paramInfo.type === 'integer'"
-                v-model="formData[paramName]"
-                :placeholder="paramInfo.description"
-                style="width: 100%"
-                controls-position="right"
-              />
-
-              <!-- 布尔值开关 -->
-              <div v-else-if="paramInfo.type === 'boolean'" class="boolean-field">
-                <el-switch v-model="formData[paramName]" />
-                <span class="boolean-description">{{ paramInfo.description }}</span>
-              </div>
-
-              <!-- 枚举选择 -->
-              <el-select
-                v-else-if="paramInfo.enum"
-                v-model="formData[paramName]"
-                :placeholder="paramInfo.description"
-                clearable
-                style="width: 100%"
+          <!-- 参数配置 -->
+          <div v-if="tool.inputSchema?.properties" class="tool-section parameters-section">
+            <h4>参数配置</h4>
+            <div class="parameters-form">
+              <el-form
+                ref="formRef"
+                :model="formData"
+                :rules="formRules"
+                label-width="auto"
+                size="default"
               >
-                <el-option
-                  v-for="option in paramInfo.enum"
-                  :key="option"
-                  :label="option"
-                  :value="option"
-                />
-              </el-select>
+                <el-form-item
+                  v-for="[paramName, paramInfo] in Object.entries(tool.inputSchema.properties)"
+                  :key="paramName"
+                  :label="paramName"
+                  :prop="paramName"
+                  :required="isRequired(paramName)"
+                >
+                  <template #label>
+                    <div class="param-label">
+                      <span>{{ paramName }}</span>
+                      <el-tag size="small" type="info">{{ paramInfo.type }}</el-tag>
+                      <el-tag v-if="isRequired(paramName)" size="small" type="warning">
+                        必需
+                      </el-tag>
+                    </div>
+                  </template>
 
-              <!-- 对象类型（显示为JSON编辑器） -->
-              <el-input
-                v-else-if="paramInfo.type === 'object'"
-                v-model="formData[paramName]"
-                type="textarea"
-                :rows="4"
-                :placeholder="`请输入JSON格式的${paramInfo.description || paramName}`"
-              />
+                  <!-- 字符串输入 -->
+                  <el-input
+                    v-if="paramInfo.type === 'string'"
+                    v-model="formData[paramName]"
+                    :placeholder="paramInfo.description"
+                    clearable
+                  />
 
-              <!-- 数组类型 -->
-              <el-input
-                v-else-if="paramInfo.type === 'array'"
-                v-model="formData[paramName]"
-                type="textarea"
-                :rows="3"
-                :placeholder="`请输入数组格式的${paramInfo.description || paramName}`"
-              />
+                  <!-- 数字输入 -->
+                  <el-input-number
+                    v-else-if="paramInfo.type === 'number' || paramInfo.type === 'integer'"
+                    v-model="formData[paramName]"
+                    :placeholder="paramInfo.description"
+                    style="width: 100%"
+                    controls-position="right"
+                  />
 
-              <!-- 其他类型默认为字符串输入 -->
-              <el-input
-                v-else
-                v-model="formData[paramName]"
-                :placeholder="paramInfo.description"
-                clearable
-              />
-            </el-form-item>
-          </el-form>
+                  <!-- 布尔值开关 -->
+                  <div v-else-if="paramInfo.type === 'boolean'" class="boolean-field">
+                    <el-switch v-model="formData[paramName]" />
+                    <span class="boolean-description">{{ paramInfo.description }}</span>
+                  </div>
+
+                  <!-- 枚举选择 -->
+                  <el-select
+                    v-else-if="paramInfo.enum"
+                    v-model="formData[paramName]"
+                    :placeholder="paramInfo.description"
+                    clearable
+                    style="width: 100%"
+                  >
+                    <el-option
+                      v-for="option in paramInfo.enum"
+                      :key="option"
+                      :label="option"
+                      :value="option"
+                    />
+                  </el-select>
+
+                  <!-- 对象类型（显示为JSON编辑器） -->
+                  <el-input
+                    v-else-if="paramInfo.type === 'object'"
+                    v-model="formData[paramName]"
+                    type="textarea"
+                    :rows="4"
+                    :placeholder="`请输入JSON格式的${paramInfo.description || paramName}`"
+                  />
+
+                  <!-- 数组类型 -->
+                  <el-input
+                    v-else-if="paramInfo.type === 'array'"
+                    v-model="formData[paramName]"
+                    type="textarea"
+                    :rows="3"
+                    :placeholder="`请输入数组格式的${paramInfo.description || paramName}`"
+                  />
+
+                  <!-- 其他类型默认为字符串输入 -->
+                  <el-input
+                    v-else
+                    v-model="formData[paramName]"
+                    :placeholder="paramInfo.description"
+                    clearable
+                  />
+                </el-form-item>
+              </el-form>
+            </div>
+          </div>
+        </div>
+
+        <!-- 右侧：调用详情 -->
+        <div class="right-detail-panel">
+          <div class="call-detail-title">
+            <h4>调用详情</h4>
+          </div>
+          <div class="call-detail-container">
+            <CallDetail :call="lastCall" />
+          </div>
         </div>
       </div>
 
@@ -154,11 +172,13 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
-import type { MCPTool } from '@/services/mcp'
+import type { MCPTool, ToolCall } from '@/services/mcp'
+import { CallDetail } from '@/components/mcp'
 
 interface Props {
   tool?: MCPTool | null
   executing?: boolean
+  lastCall?: ToolCall | null
 }
 
 interface Emits {
@@ -168,6 +188,7 @@ interface Emits {
 const props = withDefaults(defineProps<Props>(), {
   tool: null,
   executing: false,
+  lastCall: null,
 })
 
 const emit = defineEmits<Emits>()
@@ -323,6 +344,55 @@ watch(
   height: 100%;
 }
 
+.main-detail-content {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  gap: 24px;
+  padding: 0 16px;
+}
+
+.left-detail-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.right-detail-panel {
+  width: 50%;
+  min-width: 500px;
+  max-width: 800px;
+  border-left: 2px solid #e9ecef;
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  background: #fafbfc;
+  border-radius: 8px;
+  margin: -8px -16px -8px 0;
+  padding: 20px 24px;
+}
+
+.call-detail-title {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.call-detail-title h4 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.call-detail-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .tool-info-header {
   display: flex;
   justify-content: space-between;
@@ -374,7 +444,7 @@ watch(
   flex: 1;
   overflow-y: auto;
   padding: 0 24px 20px 24px;
-  max-height: calc(100vh - 300px);
+  max-height: calc(100vh - 400px);
 }
 
 .param-label {

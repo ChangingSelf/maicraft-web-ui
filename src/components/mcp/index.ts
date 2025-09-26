@@ -3,6 +3,7 @@ export { default as ToolList } from './ToolList.vue'
 export { default as ToolDetail } from './ToolDetail.vue'
 export { default as HistoryPanel } from './HistoryPanel.vue'
 export { default as NotificationPanel } from './NotificationPanel.vue'
+export { default as CallDetail } from './CallDetail.vue'
 
 // 类型定义
 export interface MCPNotification {

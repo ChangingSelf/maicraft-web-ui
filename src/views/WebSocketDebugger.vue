@@ -455,7 +455,7 @@ const sendPresetMessage = (type: string) => {
     return
   }
 
-  let message: any = { type }
+  const message: any = { type }
 
   switch (type) {
     case 'ping':
@@ -480,7 +480,7 @@ const sendTokenUsagePreset = (type: string) => {
     return
   }
 
-  let message: any = { type }
+  const message: any = { type }
 
   switch (type) {
     case 'subscribe':

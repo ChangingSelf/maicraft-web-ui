@@ -15,7 +15,12 @@
 
       <!-- 右侧工具详情面板 -->
       <div class="right-panel">
-        <ToolDetail :tool="selectedTool" :executing="executing" @run-tool="handleRunTool" />
+        <ToolDetail
+          :tool="selectedTool"
+          :executing="executing"
+          :last-call="selectedToolLastCall"
+          @run-tool="handleRunTool"
+        />
       </div>
     </div>
 
@@ -31,65 +36,23 @@
     </div>
 
     <!-- 调用详情对话框 -->
-    <el-dialog v-model="showCallDetailDialog" title="调用详情" width="700px">
-      <div v-if="selectedCall" class="call-detail">
-        <div class="detail-row"><strong>工具名称:</strong> {{ selectedCall.tool_name }}</div>
-        <div class="detail-row">
-          <strong>状态:</strong>
-          <el-tag :type="getStatusType(selectedCall.status)">
-            {{ selectedCall.status }}
-          </el-tag>
-        </div>
-        <div class="detail-row"><strong>调用ID:</strong> {{ selectedCall.call_id }}</div>
-        <div class="detail-row">
-          <strong>执行时间:</strong>
-          {{ selectedCall.execution_time ? `${selectedCall.execution_time.toFixed(2)}s` : '-' }}
-        </div>
-        <div class="detail-row">
-          <strong>调用时间:</strong> {{ formatTimestamp(selectedCall.timestamp) }}
-        </div>
-
-        <div class="detail-section">
-          <h4>调用参数</h4>
-          <el-card>
-            <pre>{{ JSON.stringify(selectedCall.parameters, null, 2) }}</pre>
-          </el-card>
-        </div>
-
-        <div class="detail-section" v-if="selectedCall.result">
-          <h4>调用结果</h4>
-          <el-card>
-            <div class="result-content">
-              <div v-if="selectedCall.result.content">
-                <div
-                  v-for="content in selectedCall.result.content"
-                  :key="content.type"
-                  class="result-item"
-                >
-                  <template v-if="content.type === 'text'">
-                    <pre>{{ content.text }}</pre>
-                  </template>
-                  <template v-else>
-                    <span>{{ content.type }}: {{ JSON.stringify(content) }}</span>
-                  </template>
-                </div>
-              </div>
-              <div class="result-meta">
-                <span>是否错误: {{ selectedCall.result.is_error ? '是' : '否' }}</span>
-              </div>
-            </div>
-          </el-card>
-        </div>
-      </div>
+    <el-dialog
+      v-model="showCallDetailDialog"
+      title="调用详情"
+      width="80%"
+      :style="{ maxWidth: '1200px' }"
+      destroy-on-close
+    >
+      <CallDetail :call="selectedCall" />
     </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mcpApi, type MCPTool, type ToolCall } from '@/services/mcp'
-import { ToolList, ToolDetail, HistoryPanel } from '@/components/mcp'
+import { ToolList, ToolDetail, HistoryPanel, CallDetail } from '@/components/mcp'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -114,20 +77,16 @@ const selectedCall = ref<ToolCall | null>(null)
 
 const showCallDetailDialog = ref(false)
 
-// 获取状态类型
-const getStatusType = (status: string) => {
-  const typeMap: Record<string, string> = {
-    success: 'success',
-    error: 'danger',
-    pending: 'warning',
-  }
-  return typeMap[status] || 'info'
-}
+// 获取选中工具的最新调用记录
+const selectedToolLastCall = computed(() => {
+  if (!selectedTool.value) return null
 
-// 格式化时间戳
-const formatTimestamp = (timestamp: number) => {
-  return new Date(timestamp).toLocaleString('zh-CN')
-}
+  // 从调用历史中找到该工具的最新调用记录
+  const toolCalls = callHistory.value.filter((call) => call.tool_name === selectedTool.value!.name)
+  const latestCall = toolCalls.sort((a, b) => b.timestamp - a.timestamp)[0]
+
+  return latestCall || null
+})
 
 // 根据工具名称推断分类
 const inferCategory = (toolName: string): string => {
