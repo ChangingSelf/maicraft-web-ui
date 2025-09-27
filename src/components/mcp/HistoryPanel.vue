@@ -29,7 +29,7 @@
           @click="$emit('item-selected', call)"
         >
           <div class="history-item-header">
-            <span class="call-index">{{ index + 1 }}</span>
+            <span class="call-index">{{ history.length - index }}</span>
             <span class="tool-name">{{ call.tool_name }}</span>
             <el-tag :type="getStatusType(call.status)" size="small">
               {{ call.status }}
