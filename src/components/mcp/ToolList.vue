@@ -1,6 +1,6 @@
 <template>
   <div class="mcp-tool-list">
-    <!-- 工具搜索和筛选 -->
+    <!-- 工具搜索 -->
     <div class="tool-filters">
       <el-input
         v-model="searchQuery"
@@ -9,19 +9,6 @@
         clearable
         @input="handleSearch"
       />
-      <el-select
-        v-model="selectedCategory"
-        placeholder="选择分类"
-        clearable
-        @change="handleCategoryChange"
-      >
-        <el-option
-          v-for="category in categories"
-          :key="category.value"
-          :label="category.label"
-          :value="category.value"
-        />
-      </el-select>
     </div>
 
     <!-- 工具列表 -->
@@ -49,11 +36,22 @@
               </el-tag>
             </div>
             <div class="tool-description">{{ tool.description }}</div>
-            <div class="tool-category">
-              <el-tag size="small" type="primary">
-                {{ getCategoryLabel(tool.category) }}
-              </el-tag>
-            </div>
+          </div>
+
+          <!-- 空状态 -->
+          <div v-if="filteredTools.length === 0 && !loading" class="tools-empty-state">
+            <EmptyState
+              :title="searchQuery ? '未找到匹配的工具' : '暂无工具'"
+              :description="searchQuery ? '请尝试调整搜索关键词' : '请检查MCP服务连接状态'"
+              size="medium"
+            >
+              <template #actions>
+                <el-button v-if="!searchQuery" type="primary" @click="$emit('refresh')">
+                  刷新
+                </el-button>
+                <el-button v-else @click="clearSearch"> 清除搜索 </el-button>
+              </template>
+            </EmptyState>
           </div>
         </div>
       </el-scrollbar>
@@ -71,6 +69,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { Search, Refresh } from '@element-plus/icons-vue'
+import EmptyState from '@/components/common/EmptyState.vue'
 import type { MCPTool } from '@/services/mcp'
 
 interface Props {
@@ -91,26 +90,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<Emits>()
 
-// 搜索和筛选状态
+// 搜索状态
 const searchQuery = ref('')
-const selectedCategory = ref('')
-
-// 工具分类
-const categories = [
-  { label: '全部', value: '' },
-  { label: '基础控制', value: 'basic_control' },
-  { label: '聊天', value: 'chat' },
-  { label: '合成物品', value: 'craft_item' },
-  { label: '合成配方', value: 'craft_with_recipe' },
-  { label: '挖掘方块', value: 'mine_block' },
-  { label: '移动', value: 'movement' },
-  { label: '挖掘', value: 'mining' },
-  { label: '合成', value: 'crafting' },
-  { label: '战斗', value: 'combat' },
-  { label: '交互', value: 'interaction' },
-  { label: '物品栏', value: 'inventory' },
-  { label: '观察', value: 'observation' },
-]
 
 // 过滤后的工具列表
 const filteredTools = computed(() => {
@@ -125,19 +106,8 @@ const filteredTools = computed(() => {
     )
   }
 
-  // 按分类过滤
-  if (selectedCategory.value) {
-    filtered = filtered.filter((tool) => tool.category === selectedCategory.value)
-  }
-
   return filtered
 })
-
-// 获取分类标签
-const getCategoryLabel = (category: string): string => {
-  const categoryItem = categories.find((cat) => cat.value === category)
-  return categoryItem?.label || category
-}
 
 // 选择工具
 const selectTool = (tool: MCPTool) => {
@@ -154,9 +124,9 @@ const handleSearch = () => {
   // 搜索逻辑已在计算属性中处理
 }
 
-// 处理分类变化
-const handleCategoryChange = () => {
-  // 分类变化逻辑已在计算属性中处理
+// 清除搜索
+const clearSearch = () => {
+  searchQuery.value = ''
 }
 </script>
 
@@ -248,9 +218,8 @@ const handleCategoryChange = () => {
   margin-bottom: 8px;
 }
 
-.tool-category {
-  display: flex;
-  justify-content: flex-end;
+.tools-empty-state {
+  padding: 20px 16px;
 }
 
 .tools-actions {

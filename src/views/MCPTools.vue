@@ -88,21 +88,6 @@ const selectedToolLastCall = computed(() => {
   return latestCall || null
 })
 
-// 根据工具名称推断分类
-const inferCategory = (toolName: string): string => {
-  const name = toolName.toLowerCase()
-  if (name.includes('move') || name.includes('go') || name.includes('walk')) return 'movement'
-  if (name.includes('mine') || name.includes('dig') || name.includes('break')) return 'mining'
-  if (name.includes('craft') || name.includes('make') || name.includes('build')) return 'crafting'
-  if (name.includes('chat') || name.includes('say') || name.includes('talk')) return 'chat'
-  if (name.includes('attack') || name.includes('fight') || name.includes('combat')) return 'combat'
-  if (name.includes('inventory') || name.includes('item') || name.includes('drop'))
-    return 'inventory'
-  if (name.includes('look') || name.includes('see') || name.includes('observe'))
-    return 'observation'
-  return 'basic_control'
-}
-
 // 加载工具列表
 const loadTools = async () => {
   try {
@@ -111,53 +96,13 @@ const loadTools = async () => {
     // 为MCP原始数据添加前端需要的字段
     tools.value = response.tools.map((tool) => ({
       ...tool,
-      category: tool.category || inferCategory(tool.name), // 如果没有category，根据名称推断
       enabled: tool.enabled !== false, // 默认启用
     }))
   } catch (error) {
     ElMessage.error('加载工具列表失败')
     console.error(error)
-    // 如果API调用失败，使用模拟数据作为fallback
-    const fallbackTools = [
-      {
-        name: 'move',
-        description: '移动到指定位置',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            position: {
-              type: 'object',
-              properties: {
-                x: { type: 'number', description: '目标X坐标' },
-                y: { type: 'number', description: '目标Y坐标' },
-                z: { type: 'number', description: '目标Z坐标' },
-              },
-              required: ['x', 'y', 'z'],
-            },
-          },
-          required: ['position'],
-        },
-      },
-      {
-        name: 'mine_block',
-        description: '挖掘指定类型的方块',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: "方块名称，如 'stone', 'iron_ore'" },
-            count: { type: 'integer', description: '挖掘数量', default: 1 },
-            digOnly: { type: 'boolean', description: '是否只挖掘不收集', default: false },
-          },
-          required: ['name'],
-        },
-      },
-    ]
-    // 为模拟数据也添加前端字段
-    tools.value = fallbackTools.map((tool) => ({
-      ...tool,
-      category: inferCategory(tool.name),
-      enabled: true,
-    }))
+    // 如果API调用失败，清空工具列表
+    tools.value = []
   } finally {
     loading.value = false
   }
