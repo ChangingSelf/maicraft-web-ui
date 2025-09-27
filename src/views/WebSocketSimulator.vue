@@ -263,7 +263,6 @@
         <div class="preview-item">
           <h4>其他数据</h4>
           <div class="preview-content">
-            <p><strong>事件数:</strong> {{ dataStore.events.length }} 条</p>
             <p><strong>任务数:</strong> {{ dataStore.tasks.length }} 个</p>
             <p>
               <strong>Token使用:</strong> {{ dataStore.tokenUsage.current_usage }}/{{
@@ -398,12 +397,9 @@ const ALL_ENDPOINTS: WSEndpointType[] = [
   'WORLD',
   'MARKER',
   'LOGS',
-  'LOGS_ALT',
+  'MCP_LOGS',
   'TOKEN_USAGE',
-  'EVENTS',
   'TASK_MANAGER',
-  'GENERAL',
-  'STATUS',
 ]
 
 // 响应式数据
@@ -618,12 +614,9 @@ const getEndpointTagType = (endpoint: string): string => {
     WORLD: 'primary',
     MARKER: 'warning',
     LOGS: 'info',
-    LOGS_ALT: 'info',
+    MCP_LOGS: 'info',
     TOKEN_USAGE: 'danger',
-    EVENTS: 'success',
     TASK_MANAGER: 'primary',
-    GENERAL: 'warning',
-    STATUS: 'info',
   }
   return typeMap[endpoint] || 'default'
 }

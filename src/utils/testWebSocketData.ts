@@ -1,5 +1,5 @@
 // 测试WebSocket数据存储的工具函数
-import { updatePlayerData, updateWorldData, addLogEntry, addEvent } from '../stores/websocketData'
+import { updatePlayerData, updateWorldData, addLogEntry } from '../stores/websocketData'
 
 // 模拟玩家数据更新
 export const simulatePlayerData = () => {
@@ -57,26 +57,11 @@ export const simulateLogEntry = () => {
   console.log('模拟日志条目已添加')
 }
 
-// 模拟事件
-export const simulateEvent = () => {
-  addEvent({
-    id: `test-${Date.now()}`,
-    type: 'test_event',
-    timestamp: new Date().toISOString(),
-    data: {
-      message: '这是一个测试事件',
-      value: Math.floor(Math.random() * 100),
-    },
-  })
-  console.log('模拟事件已添加')
-}
-
 // 运行所有模拟测试
 export const runAllSimulations = () => {
   simulatePlayerData()
   simulateWorldData()
   simulateLogEntry()
-  simulateEvent()
 
   console.log('所有模拟数据已生成，请查看监控页面验证数据显示')
 }
@@ -87,7 +72,6 @@ if (import.meta.env.DEV) {
     simulatePlayerData,
     simulateWorldData,
     simulateLogEntry,
-    simulateEvent,
     runAllSimulations,
   }
   console.log('测试函数已暴露到 window.testWebSocketData')

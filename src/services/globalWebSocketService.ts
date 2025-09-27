@@ -40,12 +40,9 @@ const ALL_ENDPOINTS: WSEndpointType[] = [
   'WORLD',
   'MARKER',
   'LOGS',
-  'LOGS_ALT',
+  'MCP_LOGS',
   'TOKEN_USAGE',
-  'EVENTS',
   'TASK_MANAGER',
-  'GENERAL',
-  'STATUS',
 ]
 
 // 每个端点的默认订阅配置
@@ -76,15 +73,14 @@ const ENDPOINT_SUBSCRIPTION_CONFIGS: Record<
       const manager = getWebSocketManager('LOGS')
       return manager.sendMessage({
         type: 'subscribe',
-        levels: ['INFO', 'WARN', 'ERROR', 'DEBUG'], // 订阅所有级别
-        // 不指定modules表示订阅所有模块
+        levels: ['INFO', 'WARNING', 'ERROR', 'DEBUG'], // 订阅所有级别
       })
     },
   },
-  LOGS_ALT: {
+  MCP_LOGS: {
     enabled: true,
     customSubscription: () => {
-      const manager = getWebSocketManager('LOGS_ALT')
+      const manager = getWebSocketManager('MCP_LOGS')
       return manager.sendMessage({
         type: 'subscribe',
         levels: ['INFO', 'WARN', 'ERROR', 'DEBUG'],
@@ -103,18 +99,6 @@ const ENDPOINT_SUBSCRIPTION_CONFIGS: Record<
       })
     },
   },
-  EVENTS: {
-    enabled: true,
-    customSubscription: () => {
-      // 事件需要特殊的订阅消息
-      const manager = getWebSocketManager('EVENTS')
-      return manager.sendMessage({
-        type: 'subscribe',
-        event_types: ['all'], // 订阅所有事件类型
-        timestamp: Date.now(),
-      })
-    },
-  },
   TASK_MANAGER: {
     enabled: true,
     customSubscription: () => {
@@ -125,14 +109,6 @@ const ENDPOINT_SUBSCRIPTION_CONFIGS: Record<
         update_interval: 5000,
       })
     },
-  },
-  GENERAL: {
-    enabled: true,
-    updateInterval: 10000, // 通用端点低频更新
-  },
-  STATUS: {
-    enabled: true,
-    updateInterval: 3000, // 状态信息中等频率更新
   },
 }
 

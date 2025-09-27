@@ -67,15 +67,6 @@ export interface LogEntry {
   merged?: boolean
 }
 
-// 事件数据类型
-export interface EventData {
-  id: string
-  type: string
-  timestamp: string
-  data: any
-  formatted_timestamp?: string
-}
-
 // Token使用数据类型（根据API文档）
 export interface TokenUsageData {
   current_usage: number
@@ -113,7 +104,6 @@ export interface WebSocketDataStore {
   world: WorldData
   logs: LogEntry[] // maicraft 日志
   mcpLogs: LogEntry[] // MCP server 日志
-  events: EventData[]
   tokenUsage: TokenUsageData
   tasks: TaskData[]
 
@@ -183,7 +173,6 @@ const websocketDataStore = reactive<WebSocketDataStore>({
   // 初始化其他数据
   logs: [],
   mcpLogs: [],
-  events: [],
   tokenUsage: {
     current_usage: 0,
     limit: 0,
@@ -198,12 +187,9 @@ const websocketDataStore = reactive<WebSocketDataStore>({
     WORLD: 0,
     MARKER: 0,
     LOGS: 0,
-    LOGS_ALT: 0,
+    MCP_LOGS: 0,
     TOKEN_USAGE: 0,
-    EVENTS: 0,
     TASK_MANAGER: 0,
-    GENERAL: 0,
-    STATUS: 0,
   },
 
   // 初始化消息计数
@@ -212,12 +198,9 @@ const websocketDataStore = reactive<WebSocketDataStore>({
     WORLD: 0,
     MARKER: 0,
     LOGS: 0,
-    LOGS_ALT: 0,
+    MCP_LOGS: 0,
     TOKEN_USAGE: 0,
-    EVENTS: 0,
     TASK_MANAGER: 0,
-    GENERAL: 0,
-    STATUS: 0,
   },
 })
 
@@ -279,25 +262,9 @@ export const addMCPLogEntry = (entry: LogEntry) => {
     websocketDataStore.mcpLogs = websocketDataStore.mcpLogs.slice(0, 1000)
   }
 
-  websocketDataStore.lastUpdated.LOGS_ALT = Date.now()
-  websocketDataStore.messageCount.LOGS_ALT++
+  websocketDataStore.lastUpdated.MCP_LOGS = Date.now()
+  websocketDataStore.messageCount.MCP_LOGS++
   console.log('[WebSocketStore] 新 MCP 日志条目:', formattedEntry)
-}
-
-export const addEvent = (event: EventData) => {
-  // 添加格式化时间戳
-  event.formatted_timestamp = new Date(event.timestamp).toLocaleString('zh-CN')
-
-  websocketDataStore.events.unshift(event)
-
-  // 限制事件数量，保留最新的500条
-  if (websocketDataStore.events.length > 500) {
-    websocketDataStore.events = websocketDataStore.events.slice(0, 500)
-  }
-
-  websocketDataStore.lastUpdated.EVENTS = Date.now()
-  websocketDataStore.messageCount.EVENTS++
-  console.log('[WebSocketStore] 新事件:', event)
 }
 
 export const updateTokenUsage = (data: any) => {
@@ -349,18 +316,14 @@ export const updateEndpointData = (endpoint: WSEndpointType, data: any) => {
     case 'LOGS':
       if (data.type === 'log' || data.type === 'log_entry') {
         addLogEntry(data)
+      } else if (data.type === 'subscribed') {
+        console.log('[WebSocketStore] LOGS订阅成功:', data.subscription)
       }
       break
 
-    case 'LOGS_ALT':
+    case 'MCP_LOGS':
       if (data.type === 'log' || data.type === 'log_entry') {
         addMCPLogEntry(data)
-      }
-      break
-
-    case 'EVENTS':
-      if (data.type === 'event') {
-        addEvent(data)
       }
       break
 
@@ -430,12 +393,8 @@ export const clearEndpointData = (endpoint: WSEndpointType) => {
       websocketDataStore.logs = []
       break
 
-    case 'LOGS_ALT':
+    case 'MCP_LOGS':
       websocketDataStore.mcpLogs = []
-      break
-
-    case 'EVENTS':
-      websocketDataStore.events = []
       break
 
     case 'TOKEN_USAGE':
@@ -464,7 +423,6 @@ export const useWebSocketData = () => {
     worldData: websocketDataStore.world,
     logs: websocketDataStore.logs,
     mcpLogs: websocketDataStore.mcpLogs,
-    events: websocketDataStore.events,
     tokenUsage: websocketDataStore.tokenUsage,
     tasks: websocketDataStore.tasks,
 
@@ -477,7 +435,6 @@ export const useWebSocketData = () => {
     updateWorldData,
     addLogEntry,
     addMCPLogEntry,
-    addEvent,
     updateTokenUsage,
     updateTasks,
     updateEndpointData,

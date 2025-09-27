@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Home from '../views/Home.vue'
 import LogViewer from '../views/LogViewer.vue'
 import MCPServerLogViewer from '../views/MCPServerLogViewer.vue'
-import EventViewer from '../views/EventViewer.vue'
 import MCPTools from '../views/MCPTools.vue'
 import Settings from '../views/Settings.vue'
 import WorldPlayerDashboard from '../views/WorldPlayerDashboard.vue'
@@ -14,6 +13,7 @@ import HeartbeatTest from '../views/HeartbeatTest.vue'
 import WebSocketMonitor from '../views/WebSocketMonitor.vue'
 import WebSocketSimulator from '../views/WebSocketSimulator.vue'
 import ComponentTest from '../views/ComponentTest.vue'
+import WebSocketTest from '../views/WebSocketTest.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -40,14 +40,6 @@ const router = createRouter({
       component: MCPServerLogViewer,
       meta: {
         title: 'MCP Server 日志查看器',
-      },
-    },
-    {
-      path: '/events',
-      name: 'events',
-      component: EventViewer,
-      meta: {
-        title: '事件查看器',
       },
     },
     // MCP 工具管理
@@ -147,6 +139,15 @@ const router = createRouter({
       component: ComponentTest,
       meta: {
         title: '组件测试',
+      },
+    },
+    // WebSocket 测试页面
+    {
+      path: '/websocket-test',
+      name: 'websocket-test',
+      component: WebSocketTest,
+      meta: {
+        title: 'WebSocket 测试',
       },
     },
   ],

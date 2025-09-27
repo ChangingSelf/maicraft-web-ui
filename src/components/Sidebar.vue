@@ -32,21 +32,19 @@
           </template>
         </el-menu-item>
 
-        <!-- 日志查看 -->
-        <el-sub-menu index="logs">
+        <!-- Agent 日志 -->
+        <el-menu-item index="minecraft-logs">
+          <el-icon><Document /></el-icon>
           <template #title>
-            <el-icon><Document /></el-icon>
-            <span>日志查看</span>
+            <span>Agent 日志</span>
           </template>
-          <el-menu-item index="minecraft-logs">agent 日志</el-menu-item>
-          <el-menu-item index="mcp-server-logs">mcp server 日志</el-menu-item>
-        </el-sub-menu>
+        </el-menu-item>
 
-        <!-- 事件查看 -->
-        <el-menu-item index="events">
-          <el-icon><List /></el-icon>
+        <!-- MCP Server 日志 -->
+        <el-menu-item index="mcp-server-logs">
+          <el-icon><Document /></el-icon>
           <template #title>
-            <span>事件查看</span>
+            <span>MCP Server 日志</span>
           </template>
         </el-menu-item>
 
@@ -79,14 +77,6 @@
           <el-icon><List /></el-icon>
           <template #title>
             <span>任务管理</span>
-          </template>
-        </el-menu-item>
-
-        <!-- 动作执行器 -->
-        <el-menu-item index="action-executor">
-          <el-icon><Setting /></el-icon>
-          <template #title>
-            <span>动作执行器</span>
           </template>
         </el-menu-item>
 
@@ -287,12 +277,9 @@ const activeIndex = computed(() => {
   if (path === '/' || path === '/home') return 'home'
   if (path === '/logs') return 'minecraft-logs'
   if (path === '/mcp-logs') return 'mcp-server-logs'
-  if (path === '/logs' || path === '/mcp-logs') return 'logs' // 用于展开子菜单
-  if (path === '/events') return 'events'
   if (path === '/mcp-tools') return 'mcp-tools'
   if (path === '/token-usage') return 'token-usage'
   if (path === '/task-manager') return 'task-manager'
-  if (path === '/action-executor') return 'action-executor'
   if (path.startsWith('/server')) return 'server'
   if (path.startsWith('/players')) return 'players'
   if (path.startsWith('/monitoring')) return 'monitoring'
@@ -400,9 +387,6 @@ const handleSelect = (index: string) => {
     case 'mcp-server-logs':
       router.push('/mcp-logs')
       break
-    case 'events':
-      router.push('/events')
-      break
     case 'server-status':
       router.push('/server/status')
       break
@@ -444,9 +428,6 @@ const handleSelect = (index: string) => {
       break
     case 'task-manager':
       router.push('/task-manager')
-      break
-    case 'action-executor':
-      router.push('/action-executor')
       break
     case 'websocket-monitor':
       router.push('/websocket-monitor')

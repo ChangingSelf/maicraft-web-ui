@@ -250,7 +250,7 @@ const logs = computed(() => {
 // 根据URL确定连接状态
 const isConnected = computed(() => {
   if (props.wsUrl.includes('mcp-logs')) {
-    return globalConnectionStatus.connectionStatus.LOGS_ALT || false
+    return globalConnectionStatus.connectionStatus.MCP_LOGS || false
   }
   return globalConnectionStatus.connectionStatus.LOGS || false
 })
@@ -599,7 +599,7 @@ const truncateMessage = (message: string): string => {
 const connect = async () => {
   try {
     if (props.wsUrl.includes('mcp-logs')) {
-      await connectSingleEndpoint('LOGS_ALT')
+      await connectSingleEndpoint('MCP_LOGS')
     } else {
       await connectSingleEndpoint('LOGS')
     }
@@ -612,7 +612,7 @@ const connect = async () => {
 const disconnect = () => {
   try {
     if (props.wsUrl.includes('mcp-logs')) {
-      disconnectSingleEndpoint('LOGS_ALT')
+      disconnectSingleEndpoint('MCP_LOGS')
     } else {
       disconnectSingleEndpoint('LOGS')
     }
@@ -876,7 +876,7 @@ const clearLogs = async () => {
     // 使用store的clearEndpointData函数清空日志
     const { clearEndpointData } = useWebSocketData()
     if (props.wsUrl.includes('mcp-logs')) {
-      clearEndpointData('LOGS_ALT')
+      clearEndpointData('MCP_LOGS')
     } else {
       clearEndpointData('LOGS')
     }

@@ -127,7 +127,6 @@ import { createWebSocketManager } from '@/services/websocket'
 const availableEndpoints = [
   { key: 'TOKEN_USAGE', label: 'Token使用量监控', url: 'ws://localhost:20914/ws/token-usage' },
   { key: 'LOGS', label: '日志监控', url: 'ws://localhost:20914/ws/logs' },
-  { key: 'EVENTS', label: '事件监控', url: 'ws://localhost:20914/ws/events' },
 ]
 
 // 状态管理

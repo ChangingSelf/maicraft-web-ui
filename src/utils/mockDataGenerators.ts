@@ -2,7 +2,6 @@ import type {
   PlayerData,
   WorldData,
   LogEntry,
-  EventData,
   TokenUsageData,
   TaskData,
 } from '../stores/websocketData'
@@ -408,56 +407,6 @@ export const generateLogEntry = (isMCP = false): LogEntry => {
     level,
     module,
     message: randomChoice(messages),
-    formatted_timestamp: new Date(timestamp).toLocaleString('zh-CN'),
-  }
-}
-
-/**
- * 生成模拟事件数据
- */
-export const generateEventData = (): EventData => {
-  const timestamp = new Date().toISOString()
-  const type = randomChoice(eventTypes)
-
-  const eventDataMap: Record<string, any> = {
-    player_join: { player: randomChoice(playerNames), ip: `192.168.1.${randomInt(1, 255)}` },
-    player_leave: { player: randomChoice(playerNames), reason: '正常退出' },
-    player_death: {
-      player: randomChoice(playerNames),
-      cause: randomChoice(['坠落', '怪物攻击', '溺水', '爆炸']),
-      location: { x: randomInt(-100, 100), y: randomInt(1, 100), z: randomInt(-100, 100) },
-    },
-    player_chat: {
-      player: randomChoice(playerNames),
-      message: randomChoice(['你好！', '有人吗？', '我在挖矿', '天气真好', '谁要一起建房子？']),
-    },
-    block_break: {
-      player: randomChoice(playerNames),
-      block: randomChoice(blockTypes),
-      location: { x: randomInt(-100, 100), y: randomInt(1, 100), z: randomInt(-100, 100) },
-    },
-    block_place: {
-      player: randomChoice(playerNames),
-      block: randomChoice(blockTypes),
-      location: { x: randomInt(-100, 100), y: randomInt(1, 100), z: randomInt(-100, 100) },
-    },
-    mob_spawn: {
-      entity: randomChoice(entityTypes),
-      location: { x: randomInt(-100, 100), y: randomInt(1, 100), z: randomInt(-100, 100) },
-      reason: randomChoice(['自然生成', '刷怪笼', '命令生成']),
-    },
-    weather_change: {
-      from: randomChoice(weatherTypes),
-      to: randomChoice(weatherTypes),
-      duration: randomInt(1000, 10000),
-    },
-  }
-
-  return {
-    id: `event_${Date.now()}_${randomInt(1000, 9999)}`,
-    type,
-    timestamp,
-    data: eventDataMap[type] || {},
     formatted_timestamp: new Date(timestamp).toLocaleString('zh-CN'),
   }
 }

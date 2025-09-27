@@ -208,12 +208,9 @@ import { createWebSocketManager } from '@/services/websocket'
 const availableEndpoints = [
   { key: 'TOKEN_USAGE', label: 'Token使用量监控', url: 'ws://localhost:20914/ws/token-usage' },
   { key: 'LOGS', label: '日志监控', url: 'ws://localhost:20914/ws/logs' },
-  { key: 'EVENTS', label: '事件监控', url: 'ws://localhost:20914/ws/events' },
   { key: 'PLAYER', label: '玩家状态', url: 'ws://localhost:20914/ws/game/player' },
   { key: 'WORLD', label: '世界状态', url: 'ws://localhost:20914/ws/game/world' },
   { key: 'TASK_MANAGER', label: '任务管理器', url: 'ws://localhost:20914/ws/task-manager' },
-  { key: 'STATUS', label: '状态监控', url: 'ws://localhost:20914/ws/status' },
-  { key: 'GENERAL', label: '通用端点', url: 'ws://localhost:20914/ws' },
 ]
 
 // 状态管理

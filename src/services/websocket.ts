@@ -7,12 +7,9 @@ export type WSEndpointType =
   | 'WORLD'
   | 'MARKER'
   | 'LOGS'
-  | 'LOGS_ALT'
+  | 'MCP_LOGS'
   | 'TOKEN_USAGE'
-  | 'EVENTS'
   | 'TASK_MANAGER'
-  | 'GENERAL'
-  | 'STATUS'
 
 // WebSocket端点配置 - 懒初始化
 let _wsEndpoints: ComputedRef<Record<WSEndpointType, string>> | null = null
@@ -28,16 +25,11 @@ const getWsEndpoints = () => {
 
       // 日志和监控端点
       LOGS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/logs`,
-      LOGS_ALT: `ws://localhost:20915/ws/mcp-logs`, // MCP Server 日志端点
+      MCP_LOGS: `ws://localhost:20915/ws/mcp-logs`, // MCP Server 日志端点
 
       // 监控和统计端点
       TOKEN_USAGE: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/token-usage`,
-      EVENTS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/events`,
       TASK_MANAGER: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/tasks`,
-
-      // 通用端点
-      GENERAL: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws`,
-      STATUS: `ws://${settingsStore.settings.websocket.host}:${settingsStore.settings.websocket.port}/ws/status`,
     }))
   }
   return _wsEndpoints
@@ -86,16 +78,11 @@ export const WS_MANAGER_CONFIGS: Record<WSEndpointType, Partial<WSConfig>> = {
 
   // 日志和监控端点配置
   LOGS: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
-  LOGS_ALT: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
+  MCP_LOGS: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
 
   // 监控和统计端点配置
   TOKEN_USAGE: { heartbeatInterval: 10000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
-  EVENTS: { heartbeatInterval: 10000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
   TASK_MANAGER: { heartbeatInterval: 10000, reconnectInterval: 3000, maxReconnectAttempts: 3 },
-
-  // 通用端点配置
-  GENERAL: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
-  STATUS: { heartbeatInterval: 10000, reconnectInterval: 5000, maxReconnectAttempts: 5 },
 }
 
 // =============================================

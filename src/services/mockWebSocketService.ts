@@ -6,7 +6,6 @@ import {
   generatePlayerData,
   generateWorldData,
   generateLogEntry,
-  generateEventData,
   generateTokenUsageData,
   generateTaskData,
   DEFAULT_MOCK_CONFIGS,
@@ -50,12 +49,9 @@ const ALL_ENDPOINTS: WSEndpointType[] = [
   'WORLD',
   'MARKER',
   'LOGS',
-  'LOGS_ALT',
+  'MCP_LOGS',
   'TOKEN_USAGE',
-  'EVENTS',
   'TASK_MANAGER',
-  'GENERAL',
-  'STATUS',
 ]
 
 // 初始化连接状态
@@ -302,7 +298,7 @@ export class MockWebSocketManager {
           formatted_timestamp: logData.formatted_timestamp,
         }
 
-      case 'LOGS_ALT':
+      case 'MCP_LOGS':
         const mcpLogData = generateLogEntry(true)
         return {
           type: 'log',
@@ -311,17 +307,6 @@ export class MockWebSocketManager {
           module: mcpLogData.module,
           message: mcpLogData.message,
           formatted_timestamp: mcpLogData.formatted_timestamp,
-        }
-
-      case 'EVENTS':
-        const eventData = generateEventData()
-        return {
-          type: 'event',
-          id: eventData.id,
-          event_type: eventData.type,
-          timestamp: eventData.timestamp,
-          data: eventData.data,
-          formatted_timestamp: eventData.formatted_timestamp,
         }
 
       case 'TOKEN_USAGE':
@@ -337,28 +322,6 @@ export class MockWebSocketManager {
           type: 'tasks_list',
           data: {
             tasks: taskList,
-          },
-        }
-
-      case 'GENERAL':
-        return {
-          type: 'status_update',
-          data: {
-            server_status: 'running',
-            player_count: Math.floor(Math.random() * 20),
-            tps: Math.random() * 20,
-            memory_usage: Math.random() * 100,
-          },
-        }
-
-      case 'STATUS':
-        return {
-          type: 'server_status',
-          data: {
-            online: true,
-            uptime: Date.now() - Math.random() * 86400000,
-            version: '1.20.1',
-            plugins: Math.floor(Math.random() * 50),
           },
         }
 

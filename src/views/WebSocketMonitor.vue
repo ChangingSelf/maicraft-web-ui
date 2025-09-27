@@ -184,15 +184,6 @@
             <p><strong>最后更新:</strong> {{ formatTime(lastUpdated.LOGS || 0) }}</p>
           </div>
         </div>
-
-        <div class="data-item">
-          <h4>事件数据</h4>
-          <div class="data-content">
-            <p><strong>事件条数:</strong> {{ dataStore.events.length }}</p>
-            <p><strong>最新事件:</strong> {{ dataStore.events[0]?.type || '无' }}</p>
-            <p><strong>最后更新:</strong> {{ formatTime(lastUpdated.EVENTS || 0) }}</p>
-          </div>
-        </div>
       </div>
     </el-card>
 
@@ -396,7 +387,6 @@ const getEndpointTagType = (endpoint: string): string => {
     PLAYER: 'success',
     WORLD: 'primary',
     LOGS: 'warning',
-    EVENTS: 'info',
     TOKEN_USAGE: 'danger',
   }
   return typeMap[endpoint] || 'default'
