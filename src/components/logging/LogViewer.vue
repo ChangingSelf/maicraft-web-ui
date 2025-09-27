@@ -9,21 +9,24 @@
       <LogControls
         :is-connected="isConnected"
         :rate-limited-count="rateLimitedCount"
-        :user-scrolled-up="userScrolledUp"
-        :scroll-paused-by-spam="scrollPausedBySpam"
         :stats-visible="statsVisible"
+        :auto-scroll-enabled="manualAutoScrollEnabled"
         @toggle-connection="toggleConnection"
         @clear-logs="clearLogs"
         @show-settings="showSettings = true"
         @toggle-stats="toggleStats"
-        @resume-auto-scroll="resumeAutoScroll"
+        @toggle-auto-scroll="toggleAutoScroll"
       />
 
       <!-- 测试按钮（仅开发环境显示） -->
       <div v-if="true" class="test-controls" style="margin-top: 10px">
         <el-button size="small" @click="addTestLogs" type="primary"> 添加测试日志 </el-button>
+        <el-button size="small" @click="addSingleTestLog" type="success" style="margin-left: 10px">
+          添加单条日志
+        </el-button>
         <span style="margin-left: 10px; font-size: 12px; color: #666">
-          模块数量: {{ availableModules.length }} | 日志数量: {{ logs.length }}
+          模块数量: {{ availableModules.length }} | 日志数量: {{ logs.length }} | 自动滚动:
+          {{ manualAutoScrollEnabled ? '开' : '关' }}
         </span>
       </div>
     </div>
@@ -176,7 +179,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, onActivated, onDeactivated, nextTick, computed } from 'vue'
+import {
+  ref,
+  onMounted,
+  onUnmounted,
+  onActivated,
+  onDeactivated,
+  nextTick,
+  computed,
+  watch,
+} from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Search, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
@@ -313,10 +325,7 @@ const logTimestamps = ref<number[]>([])
 const rateLimitedCount = ref(0)
 
 // 智能滚动相关
-const userScrolledUp = ref(false)
-const scrollPausedBySpam = ref(false)
-const lastScrollCheck = ref(0)
-const spamDetectionThreshold = ref(5) // 5条日志/秒算刷屏
+const manualAutoScrollEnabled = ref(true) // 用户手动控制的自动滚动开关
 
 // 统计数据相关
 const statsVisible = ref(false)
@@ -430,18 +439,39 @@ const availableModules = computed(() => {
 })
 
 // 工具函数
-const formatTime = (timestamp: number): string => {
-  const date = new Date(timestamp)
-  const timeString = date.toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  })
-  const milliseconds = String(date.getMilliseconds()).padStart(3, '0')
-  return `${timeString}.${milliseconds}`
+const formatTime = (timestamp: number | string): string => {
+  // 确保timestamp是数字类型
+  const timestampNum = typeof timestamp === 'string' ? parseInt(timestamp) : timestamp
+
+  // 检查时间戳是否有效
+  if (
+    isNaN(timestampNum) ||
+    timestampNum < 0 ||
+    timestampNum > Date.now() + 365 * 24 * 60 * 60 * 1000
+  ) {
+    return '时间无效'
+  }
+
+  try {
+    const date = new Date(timestampNum)
+    // 再次验证日期是否有效
+    if (isNaN(date.getTime())) {
+      return '时间无效'
+    }
+    const timeString = date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+    const milliseconds = String(date.getMilliseconds()).padStart(3, '0')
+    return `${timeString}.${milliseconds}`
+  } catch (error) {
+    console.warn('日志时间戳格式化失败:', timestamp, error)
+    return '时间无效'
+  }
 }
 
 // 频率限制检查函数
@@ -467,62 +497,24 @@ const checkRateLimit = (): boolean => {
   return false // 没有超过限制
 }
 
-// 刷屏检测函数
-const detectSpam = (): boolean => {
-  const now = Date.now()
-  if (now - lastScrollCheck.value < 1000) {
-    return false // 每秒只检测一次
-  }
+// 刷屏检测功能已移除，完全由用户手动控制
 
-  lastScrollCheck.value = now
-  const recentLogs = logs.value.filter((log) => {
-    const logTime =
-      typeof log.timestamp === 'number' ? log.timestamp : parseInt(String(log.timestamp))
-    return now - logTime < 1000
-  })
+// 检查滚动位置功能已移除，完全由用户手动控制
 
-  if (recentLogs.length >= spamDetectionThreshold.value) {
-    return true // 检测到刷屏
-  }
-
-  return false
-}
-
-// 检查用户是否滚动到底部
-const isScrolledToBottom = (): boolean => {
-  if (!logsContainer.value) return true
-
-  const container = logsContainer.value
-  const threshold = 50 // 距离底部50px以内算到底部
-  return container.scrollHeight - container.scrollTop - container.clientHeight < threshold
-}
-
-// 处理滚动事件
+// 处理滚动事件 - 移除自动暂停逻辑，完全由用户手动控制
 const handleScroll = () => {
-  if (!logsContainer.value) return
-
-  const atBottom = isScrolledToBottom()
-
-  if (!atBottom) {
-    userScrolledUp.value = true
-  } else {
-    userScrolledUp.value = false
-  }
+  // 不再自动检测滚动位置，完全由用户通过按钮控制自动滚动
 }
 
-// 智能滚动函数
+// 智能自动滚动到底部 - 完全由用户控制
 const smartScrollToBottom = () => {
+  // 1. 检查全局设置中的自动滚动开关
   if (!settings.value.autoScroll) return
-  if (userScrolledUp.value) return
-  if (scrollPausedBySpam.value) return
 
-  // 检查是否检测到刷屏
-  if (detectSpam()) {
-    scrollPausedBySpam.value = true
-    ElMessage.info('检测到日志刷屏，已暂停自动滚动')
-    return
-  }
+  // 2. 检查用户手动控制的自动滚动开关
+  if (!manualAutoScrollEnabled.value) return
 
+  // 执行自动滚动到底部
   nextTick(() => {
     scrollToBottom()
   })
@@ -829,8 +821,7 @@ const handleMessage = (data: WebSocketMessage) => {
           addLogEntry(newLogEntry)
         }
 
-        // 智能自动滚动到底部
-        smartScrollToBottom()
+        // 自动滚动现在由watch(filteredLogs)处理
 
         // 更新统计数据
         updateStats()
@@ -853,17 +844,20 @@ const scheduleReconnect = () => {
   // 移除自动重连功能，保持手动连接模式
 }
 
-// 恢复自动滚动
-const resumeAutoScroll = () => {
-  userScrolledUp.value = false
-  scrollPausedBySpam.value = false
-  ElMessage.success('已恢复自动滚动')
+// 切换自动滚动 - 用户手动控制自动滚动开关
+const toggleAutoScroll = () => {
+  manualAutoScrollEnabled.value = !manualAutoScrollEnabled.value
+  ElMessage.success(manualAutoScrollEnabled.value ? '已开启自动滚动' : '已暂停自动滚动')
 
-  // 立即滚动到底部
-  nextTick(() => {
-    scrollToBottom()
-  })
+  // 如果启用了自动滚动，立即滚动到底部
+  if (manualAutoScrollEnabled.value) {
+    nextTick(() => {
+      scrollToBottom()
+    })
+  }
 }
+
+// 恢复自动滚动功能已移除，完全由用户手动控制
 
 const clearLogs = async () => {
   try {
@@ -884,12 +878,47 @@ const clearLogs = async () => {
     expandedLogs.value = {}
     logTimestamps.value = []
     rateLimitedCount.value = 0
-    userScrolledUp.value = false
-    scrollPausedBySpam.value = false
     ElMessage.success('日志已清空')
   } catch {
     // 用户取消操作
   }
+}
+
+// 添加单条测试日志（用于验证自动滚动）
+const addSingleTestLog = () => {
+  const { addLogEntry, addMCPLogEntry } = useWebSocketData()
+  const testModules = [
+    'minecraft.server',
+    'minecraft.world',
+    'minecraft.player',
+    'minecraft.network',
+  ]
+  const testLevels = ['INFO', 'WARNING', 'ERROR']
+  const testMessages = [
+    '玩家加入游戏',
+    '世界数据更新',
+    '网络连接建立',
+    '命令执行完成',
+    '内存使用警告',
+    '配置文件重载',
+  ]
+
+  const testLog = {
+    timestamp: Date.now(),
+    level: testLevels[Math.floor(Math.random() * testLevels.length)],
+    module: testModules[Math.floor(Math.random() * testModules.length)],
+    message:
+      testMessages[Math.floor(Math.random() * testMessages.length)] +
+      ` (${new Date().toLocaleTimeString()})`,
+  }
+
+  if (props.wsUrl.includes('mcp-logs')) {
+    addMCPLogEntry(testLog)
+  } else {
+    addLogEntry(testLog)
+  }
+
+  ElMessage.success('已添加1条测试日志')
 }
 
 // 添加测试日志数据（用于开发测试）
@@ -940,6 +969,20 @@ const applySettings = () => {
     setTimeout(() => connect(), 1000)
   }
 }
+
+// 监听原始日志数据变化，触发自动滚动
+watch(
+  () => logs.value.length,
+  (newLength, oldLength) => {
+    // 只有当日志数量增加时才触发自动滚动
+    if (newLength > oldLength) {
+      // 使用更长的延迟确保DOM已更新
+      setTimeout(() => {
+        smartScrollToBottom()
+      }, 50)
+    }
+  },
+)
 
 // 生命周期
 onMounted(() => {
