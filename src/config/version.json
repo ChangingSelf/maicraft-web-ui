@@ -1,17 +1,34 @@
 {
-  "current": "0.19.2",
+  "current": "0.20.0",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
-  "buildDate": "2025-09-26",
-  "buildTime": "23:10:15",
+  "buildDate": "2025-09-27",
+  "buildTime": "15:17:44",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
-    "lastUpdated": "2025-09-26",
-    "totalVersions": 33,
+    "lastUpdated": "2025-09-27",
+    "totalVersions": 34,
     "versions": [
+      {
+        "version": "0.20.0",
+        "date": "2025-09-27",
+        "type": "minor",
+        "changes": {
+          "fix": [
+            "修正mcp历史调用面板的索引显示逻辑"
+          ],
+          "feat": [
+            "优化mcp页面",
+            "更新侧边栏菜单",
+            "优化日志查看器，添加自动滚动功能",
+            "优化主页布局"
+          ]
+        },
+        "summary": "🐛 修复 - 修正mcp历史调用面板的索引显示逻辑; ✨ 新功能 - 优化mcp页面; ✨ 新功能 - 更新侧边栏菜单; ✨ 新功能 - 优化日志查看器，添加自动滚动功能; ✨ 新功能 - 优化主页布局"
+      },
       {
         "version": "0.19.2",
         "date": "2025-09-26",
