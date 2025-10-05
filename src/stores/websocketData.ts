@@ -240,7 +240,6 @@ export const addLogEntry = (entry: LogEntry) => {
 
   websocketDataStore.lastUpdated.LOGS = Date.now()
   websocketDataStore.messageCount.LOGS++
-  console.log('[WebSocketStore] 新 maicraft 日志条目:', formattedEntry)
 }
 
 export const addMCPLogEntry = (entry: LogEntry) => {
@@ -390,11 +389,11 @@ export const clearEndpointData = (endpoint: WSEndpointType) => {
       break
 
     case 'LOGS':
-      websocketDataStore.logs = []
+      websocketDataStore.logs.splice(0, websocketDataStore.logs.length)
       break
 
     case 'MCP_LOGS':
-      websocketDataStore.mcpLogs = []
+      websocketDataStore.mcpLogs.splice(0, websocketDataStore.mcpLogs.length)
       break
 
     case 'TOKEN_USAGE':

@@ -246,7 +246,13 @@ interface WebSocketMessage {
 }
 
 // 使用全局WebSocket数据存储
-const { logs: globalLogs, mcpLogs: globalMcpLogs } = useWebSocketData()
+const {
+  logs: globalLogs,
+  mcpLogs: globalMcpLogs,
+  clearEndpointData,
+  addLogEntry,
+  addMCPLogEntry,
+} = useWebSocketData()
 const globalConnectionStatus = getGlobalConnectionStatus()
 
 // 根据URL确定使用哪种日志数据
@@ -419,9 +425,6 @@ const filteredLogs = computed(() => {
       const bTime = typeof b.timestamp === 'number' ? b.timestamp : parseInt(String(b.timestamp))
       return aTime - bTime
     })
-
-  // 更新搜索匹配计数
-  searchMatchCount.value = searchQuery.value ? filtered.length : 0
 
   return filtered
 })
@@ -814,7 +817,6 @@ const handleMessage = (data: WebSocketMessage) => {
         }
 
         // 添加新日志（由store处理数量限制）
-        const { addLogEntry, addMCPLogEntry } = useWebSocketData()
         if (props.wsUrl.includes('mcp-logs')) {
           addMCPLogEntry(newLogEntry)
         } else {
@@ -868,16 +870,26 @@ const clearLogs = async () => {
     })
 
     // 使用store的clearEndpointData函数清空日志
-    const { clearEndpointData } = useWebSocketData()
     if (props.wsUrl.includes('mcp-logs')) {
       clearEndpointData('MCP_LOGS')
     } else {
       clearEndpointData('LOGS')
     }
 
+    // 重置所有筛选状态到默认值
+    selectedLevels.value = ['INFO', 'WARNING', 'ERROR']
+    selectedModules.value = [] // 空数组表示全选所有模块
+    searchQuery.value = ''
+    useRegex.value = false
+
+    // 重置其他相关状态
     expandedLogs.value = {}
     logTimestamps.value = []
     rateLimitedCount.value = 0
+
+    // 更新统计数据
+    updateStats()
+
     ElMessage.success('日志已清空')
   } catch {
     // 用户取消操作
@@ -886,7 +898,6 @@ const clearLogs = async () => {
 
 // 添加单条测试日志（用于验证自动滚动）
 const addSingleTestLog = () => {
-  const { addLogEntry, addMCPLogEntry } = useWebSocketData()
   const testModules = [
     'minecraft.server',
     'minecraft.world',
@@ -923,7 +934,6 @@ const addSingleTestLog = () => {
 
 // 添加测试日志数据（用于开发测试）
 const addTestLogs = () => {
-  const { addLogEntry, addMCPLogEntry } = useWebSocketData()
   const testModules = [
     'minecraft.server',
     'minecraft.world',
@@ -982,6 +992,16 @@ watch(
       }, 50)
     }
   },
+)
+
+// 监听过滤后的日志变化，更新搜索匹配计数
+watch(
+  () => filteredLogs.value,
+  (newFilteredLogs) => {
+    // 更新搜索匹配计数
+    searchMatchCount.value = searchQuery.value ? newFilteredLogs.length : 0
+  },
+  { immediate: true },
 )
 
 // 生命周期
