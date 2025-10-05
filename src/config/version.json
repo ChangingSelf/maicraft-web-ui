@@ -1,17 +1,28 @@
 {
-  "current": "0.20.0",
+  "current": "0.20.1",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
-  "buildDate": "2025-09-27",
-  "buildTime": "15:17:44",
+  "buildDate": "2025-10-05",
+  "buildTime": "09:52:41",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
-    "lastUpdated": "2025-09-27",
-    "totalVersions": 34,
+    "lastUpdated": "2025-10-05",
+    "totalVersions": 35,
     "versions": [
+      {
+        "version": "0.20.1",
+        "date": "2025-10-05",
+        "type": "patch",
+        "changes": {
+          "fix": [
+            "清空日志功能"
+          ]
+        },
+        "summary": "🐛 修复 - 清空日志功能"
+      },
       {
         "version": "0.20.0",
         "date": "2025-09-27",
