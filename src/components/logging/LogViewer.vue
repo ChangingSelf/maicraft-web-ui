@@ -192,7 +192,7 @@ import {
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Document, Search, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
-import { useWebSocketData } from '@/stores/websocketData'
+import { useWebSocketDataStore } from '@/stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectSingleEndpoint,
@@ -246,13 +246,14 @@ interface WebSocketMessage {
 }
 
 // 使用全局WebSocket数据存储
+const store = useWebSocketDataStore()
 const {
   logs: globalLogs,
   mcpLogs: globalMcpLogs,
   clearEndpointData,
   addLogEntry,
   addMCPLogEntry,
-} = useWebSocketData()
+} = store
 const globalConnectionStatus = getGlobalConnectionStatus()
 
 // 根据URL确定使用哪种日志数据

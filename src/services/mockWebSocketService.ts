@@ -1,7 +1,7 @@
 import { reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { WSEndpointType } from './websocket'
-import { updateEndpointData } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 import {
   generatePlayerData,
   generateWorldData,
@@ -348,7 +348,8 @@ export const getMockWebSocketManager = (endpoint: WSEndpointType): MockWebSocket
     manager.addMessageHandler((message) => {
       try {
         console.log(`[MockWS] ${endpoint} 准备更新数据:`, message)
-        updateEndpointData(endpoint, message)
+        const store = useWebSocketDataStore()
+        store.updateEndpointData(endpoint, message)
         console.log(`[MockWS] ${endpoint} 数据已更新到全局存储`)
       } catch (error) {
         console.error(`[MockWS] ${endpoint} 数据更新失败:`, error)

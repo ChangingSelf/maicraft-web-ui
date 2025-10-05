@@ -229,7 +229,7 @@ import {
   type GlobalConnectionStatus,
 } from '../services/globalWebSocketService'
 import { type WSEndpointType } from '../services/websocket'
-import { useWebSocketData, getWebSocketDataStore } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 
 // 连接日志类型
 interface ConnectionLog {
@@ -245,8 +245,9 @@ const connectionLogs = ref<ConnectionLog[]>([])
 const refreshTimer = ref<number | null>(null)
 
 // 使用全局数据存储
-const { messageCount, lastUpdated } = useWebSocketData()
-const dataStore = getWebSocketDataStore()
+const store = useWebSocketDataStore()
+const { messageCount, lastUpdated } = store
+const dataStore = store
 
 // 计算属性
 const isConnecting = computed(() => globalStatus.isConnecting)

@@ -5,11 +5,11 @@
     <div class="world-row">
       <div class="world-item">
         <span class="world-label">时间:</span>
-        <span class="world-value">{{ worldData.time?.formatted_time || '未知' }}</span>
+        <span class="world-value">{{ world.time?.formatted_time || '未知' }}</span>
       </div>
       <div class="world-item">
         <span class="world-label">天气:</span>
-        <span class="world-value">{{ worldData.weather?.formatted_weather || '未知' }}</span>
+        <span class="world-value">{{ world.weather?.formatted_weather || '未知' }}</span>
       </div>
     </div>
 
@@ -17,11 +17,11 @@
     <div class="world-row">
       <div class="world-item">
         <span class="world-label">维度:</span>
-        <span class="world-value">{{ worldData.location?.dimension || '未知' }}</span>
+        <span class="world-value">{{ world.location?.dimension || '未知' }}</span>
       </div>
       <div class="world-item">
         <span class="world-label">生物群系:</span>
-        <span class="world-value">{{ worldData.location?.biome || '未知' }}</span>
+        <span class="world-value">{{ world.location?.biome || '未知' }}</span>
       </div>
     </div>
 
@@ -29,11 +29,11 @@
     <div class="world-row">
       <div class="world-item">
         <span class="world-label">光照等级:</span>
-        <span class="world-value">{{ worldData.location?.light_level || '未知' }}</span>
+        <span class="world-value">{{ world.location?.light_level || '未知' }}</span>
       </div>
       <div class="world-item">
         <span class="world-label">游戏天数:</span>
-        <span class="world-value">{{ worldData.time?.day_count || '未知' }}</span>
+        <span class="world-value">{{ world.time?.day_count || '未知' }}</span>
       </div>
     </div>
   </div>
@@ -41,10 +41,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useWebSocketData } from '../../stores/websocketData'
+import { useWebSocketDataStore } from '../../stores/websocketData'
 
 // 使用全局WebSocket数据存储
-const { worldData } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { world } = store
 </script>
 
 <style scoped>

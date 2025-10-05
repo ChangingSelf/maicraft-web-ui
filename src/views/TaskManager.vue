@@ -405,7 +405,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { type Task } from '../services'
-import { useWebSocketData } from '@/stores/websocketData'
+import { useWebSocketDataStore } from '@/stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectSingleEndpoint,
@@ -475,7 +475,8 @@ const taskStats = computed(() => {
 })
 
 // 使用全局状态中的任务数据
-const { tasks: globalTasks } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { tasks: globalTasks } = store
 const tasks = computed(() => globalTasks)
 
 const loading = ref(false)

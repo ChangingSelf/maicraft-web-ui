@@ -229,7 +229,7 @@ import { Refresh, Coin, Document, ChatDotRound, User } from '@element-plus/icons
 import { ElMessage } from 'element-plus'
 import { PageHeader, ConnectionStatus } from '@/components/common'
 import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
-import { useWebSocketData } from '@/stores/websocketData'
+import { useWebSocketDataStore } from '@/stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectSingleEndpoint,
@@ -243,7 +243,8 @@ defineOptions({
 
 // WebSocket连接状态
 // 使用全局WebSocket数据存储
-const { tokenUsage: globalTokenUsage } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { tokenUsage: globalTokenUsage } = store
 const globalConnectionStatus = getGlobalConnectionStatus()
 
 const isConnected = computed(() => globalConnectionStatus.connectionStatus.TOKEN_USAGE || false)

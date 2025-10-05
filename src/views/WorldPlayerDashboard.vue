@@ -27,29 +27,27 @@
         <div class="world-info-content">
           <div class="world-info-item">
             <span class="world-info-label">时间:</span>
-            <span class="world-info-value">{{ worldData.time?.formatted_time || '未知' }}</span>
+            <span class="world-info-value">{{ world.time?.formatted_time || '未知' }}</span>
           </div>
           <div class="world-info-item">
             <span class="world-info-label">天气:</span>
-            <span class="world-info-value">{{
-              worldData.weather?.formatted_weather || '未知'
-            }}</span>
+            <span class="world-info-value">{{ world.weather?.formatted_weather || '未知' }}</span>
           </div>
           <div class="world-info-item">
             <span class="world-info-label">维度:</span>
-            <span class="world-info-value">{{ worldData.location?.dimension || '未知' }}</span>
+            <span class="world-info-value">{{ world.location?.dimension || '未知' }}</span>
           </div>
           <div class="world-info-item">
             <span class="world-info-label">生物群系:</span>
-            <span class="world-info-value">{{ worldData.location?.biome || '未知' }}</span>
+            <span class="world-info-value">{{ world.location?.biome || '未知' }}</span>
           </div>
           <div class="world-info-item">
             <span class="world-info-label">光照等级:</span>
-            <span class="world-info-value">{{ worldData.location?.light_level || '未知' }}</span>
+            <span class="world-info-value">{{ world.location?.light_level || '未知' }}</span>
           </div>
           <div class="world-info-item">
             <span class="world-info-label">游戏天数:</span>
-            <span class="world-info-value">{{ worldData.time?.day_count || '未知' }}</span>
+            <span class="world-info-value">{{ world.time?.day_count || '未知' }}</span>
           </div>
         </div>
       </el-card>
@@ -76,23 +74,23 @@
                   <div class="equipment-item">
                     <div class="equip-slot">主手</div>
                     <div class="equip-content">
-                      <div v-if="playerData.equipment?.main_hand" class="equip-info">
+                      <div v-if="player.equipment?.main_hand" class="equip-info">
                         <div class="equip-name">
-                          {{ playerData.equipment.main_hand.display_name }}
+                          {{ player.equipment.main_hand.display_name }}
                         </div>
                         <div class="equip-details">
-                          <span>数量: {{ playerData.equipment.main_hand.count }}</span>
-                          <span v-if="playerData.equipment.main_hand.damage">
-                            耐久: {{ playerData.equipment.main_hand.damage }}/{{
-                              playerData.equipment.main_hand.max_damage
+                          <span>数量: {{ player.equipment.main_hand.count }}</span>
+                          <span v-if="player.equipment.main_hand.damage">
+                            耐久: {{ player.equipment.main_hand.damage }}/{{
+                              player.equipment.main_hand.max_damage
                             }}
                           </span>
                         </div>
                         <el-progress
-                          v-if="playerData.equipment.main_hand.max_damage"
-                          :percentage="getDurabilityPercentage(playerData.equipment.main_hand)"
+                          v-if="player.equipment.main_hand.max_damage"
+                          :percentage="getDurabilityPercentage(player.equipment.main_hand)"
                           :stroke-width="4"
-                          :color="getDurabilityColor(playerData.equipment.main_hand)"
+                          :color="getDurabilityColor(player.equipment.main_hand)"
                           :show-text="false"
                         />
                       </div>
@@ -103,10 +101,10 @@
                   <div v-for="(slot, key) in equipmentSlots" :key="key" class="equipment-item">
                     <div class="equip-slot">{{ slot.label }}</div>
                     <div class="equip-content">
-                      <div v-if="playerData.equipment?.[key]" class="equip-info">
-                        <div class="equip-name">{{ playerData.equipment[key].display_name }}</div>
+                      <div v-if="player.equipment?.[key]" class="equip-info">
+                        <div class="equip-name">{{ player.equipment[key].display_name }}</div>
                         <div class="equip-details">
-                          <span>数量: {{ playerData.equipment[key].count }}</span>
+                          <span>数量: {{ player.equipment[key].count }}</span>
                         </div>
                       </div>
                       <div v-else class="equip-empty">空</div>
@@ -120,8 +118,8 @@
                 <!-- 基本信息 -->
                 <div class="basic-info-compact">
                   <div class="basic-info-row">
-                    <span class="player-name">{{ playerData.name || '未知' }}</span>
-                    <span class="game-mode">{{ playerData.gamemode || '未知' }}</span>
+                    <span class="player-name">{{ player.name || '未知' }}</span>
+                    <span class="game-mode">{{ player.gamemode || '未知' }}</span>
                   </div>
                 </div>
 
@@ -129,27 +127,27 @@
                 <div class="stats-list">
                   <ProgressCard
                     label="生命值"
-                    :current-value="Number(playerData.health?.toFixed(0) || 0)"
-                    :max-value="Number(playerData.max_health?.toFixed(0) || 20)"
+                    :current-value="Number(player.health?.toFixed(0) || 0)"
+                    :max-value="Number(player.max_health?.toFixed(0) || 20)"
                   />
                   <ProgressCard
                     label="饥饿值"
-                    :current-value="Number(playerData.food?.toFixed(0) || 0)"
-                    :max-value="Number(playerData.max_food?.toFixed(0) || 20)"
+                    :current-value="Number(player.food?.toFixed(0) || 0)"
+                    :max-value="Number(player.max_food?.toFixed(0) || 20)"
                   />
                   <ProgressCard
                     label="经验值"
-                    :current-value="Number(playerData.experience?.toFixed(0) || 0)"
-                    :max-value="getMaxExperienceForLevel(Number(playerData.level?.toFixed(0) || 0))"
+                    :current-value="Number(player.experience?.toFixed(0) || 0)"
+                    :max-value="getMaxExperienceForLevel(Number(player.level?.toFixed(0) || 0))"
                     :show-level="true"
-                    :level="Number(playerData.level?.toFixed(0) || 0)"
+                    :level="Number(player.level?.toFixed(0) || 0)"
                   />
                 </div>
 
                 <!-- 位置信息 -->
                 <div class="location-box">
                   <CoordinateDisplay
-                    :position="playerData.position || {}"
+                    :position="player.position || {}"
                     :show-orientation="true"
                     :precision="1"
                   />
@@ -165,15 +163,15 @@
             <div class="card-header">
               <el-icon><Box /></el-icon>
               <span>
-                物品栏 ({{ playerData.inventory?.occupied_slots || 0 }}/{{
-                  playerData.inventory?.total_slots || 36
+                物品栏 ({{ player.inventory?.occupied_slots || 0 }}/{{
+                  player.inventory?.total_slots || 36
                 }})
               </span>
             </div>
           </template>
-          <div v-if="playerData.inventory?.items?.length > 0" class="inventory-grid">
+          <div v-if="player.inventory?.items?.length > 0" class="inventory-grid">
             <ItemCard
-              v-for="item in playerData.inventory.items"
+              v-for="item in player.inventory.items"
               :key="item.slot"
               :item="item"
               :show-slot="true"
@@ -275,7 +273,7 @@ import {
   subscribeWorldWS,
   subscribePlayerWS,
 } from '../services/websocket'
-import { useWebSocketData } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectSingleEndpoint,
@@ -283,7 +281,8 @@ import {
 } from '../services/globalWebSocketService'
 
 // 使用全局WebSocket数据存储
-const { worldData, playerData } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { world, player } = store
 const globalConnectionStatus = getGlobalConnectionStatus()
 
 // WebSocket管理器
@@ -323,8 +322,8 @@ const getMaxExperienceForLevel = (level: number) => {
 
 // 玩家基本信息数据（只包含名称和游戏模式）
 const playerBasicItems = computed<DataGridItem[]>(() => [
-  { key: 'name', label: '玩家名称', value: playerData.name || '未知' },
-  { key: 'gamemode', label: '游戏模式', value: playerData.gamemode || '未知' },
+  { key: 'name', label: '玩家名称', value: player.name || '未知' },
+  { key: 'gamemode', label: '游戏模式', value: player.gamemode || '未知' },
 ])
 
 // 装备槽位配置
@@ -336,8 +335,8 @@ const equipmentSlots = {
 }
 
 // 世界数据计算属性
-const nearbyBlocks = computed(() => worldData.nearby_blocks || [])
-const nearbyEntities = computed(() => worldData.nearby_entities || [])
+const nearbyBlocks = computed(() => world.nearby_blocks || [])
+const nearbyEntities = computed(() => world.nearby_entities || [])
 
 // 连接所有WebSocket
 const connectAll = async () => {
@@ -366,8 +365,12 @@ const disconnectAll = () => {
 
 // 获取耐久度百分比
 const getDurabilityPercentage = (item: any) => {
-  if (!item.damage || !item.max_damage) return 100
-  return ((item.max_damage - item.damage) / item.max_damage) * 100
+  if (!item?.damage || !item?.max_damage) return 100
+  const maxDamage = Number(item.max_damage)
+  const damage = Number(item.damage)
+  if (maxDamage <= 0) return 100
+  const percentage = ((maxDamage - damage) / maxDamage) * 100
+  return Math.max(0, Math.min(100, percentage)) // 确保在 0-100 范围内
 }
 
 // 获取耐久度颜色

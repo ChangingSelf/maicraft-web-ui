@@ -1,9 +1,10 @@
 // 测试WebSocket数据存储的工具函数
-import { updatePlayerData, updateWorldData, addLogEntry } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 
 // 模拟玩家数据更新
 export const simulatePlayerData = () => {
-  updatePlayerData({
+  const store = useWebSocketDataStore()
+  store.updatePlayerData({
     name: 'TestPlayer',
     health: 18,
     max_health: 20,
@@ -26,7 +27,8 @@ export const simulatePlayerData = () => {
 
 // 模拟世界数据更新
 export const simulateWorldData = () => {
-  updateWorldData({
+  const store = useWebSocketDataStore()
+  store.updateWorldData({
     time: {
       time_of_day: 6000,
       formatted_time: '正午',
@@ -48,7 +50,8 @@ export const simulateWorldData = () => {
 
 // 模拟日志条目
 export const simulateLogEntry = () => {
-  addLogEntry({
+  const store = useWebSocketDataStore()
+  store.addLogEntry({
     timestamp: new Date().toISOString(),
     level: 'INFO',
     module: 'TestModule',

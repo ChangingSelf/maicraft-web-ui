@@ -6,7 +6,7 @@ import {
   WS_MANAGER_CONFIGS,
   subscribeWebSocket,
 } from './websocket'
-import { updateEndpointData } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 import {
   getMockWebSocketManager,
   getMockServiceState,
@@ -252,7 +252,8 @@ export async function connectAllWebSockets(): Promise<void> {
 
           // 更新全局数据存储
           try {
-            updateEndpointData(endpoint, message)
+            const store = useWebSocketDataStore()
+            store.updateEndpointData(endpoint, message)
           } catch (error) {
             console.error(`[GlobalWS] ${endpoint} 数据更新失败:`, error)
           }

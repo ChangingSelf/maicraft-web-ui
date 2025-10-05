@@ -107,7 +107,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useWebSocketData } from '@/stores/websocketData'
+import { useWebSocketDataStore } from '@/stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectAllWebSockets,
@@ -117,7 +117,8 @@ import {
 } from '@/services/globalWebSocketService'
 import { getWsEndpointsValue } from '@/services/websocket'
 
-const { logs, mcpLogs } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { logs, mcpLogs } = store
 const globalStatus = getGlobalConnectionStatus()
 
 const testingLogs = ref(false)

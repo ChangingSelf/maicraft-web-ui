@@ -389,7 +389,7 @@ import {
 } from '../services/mockWebSocketService'
 import type { MockDataConfig } from '../utils/mockDataGenerators'
 import type { WSEndpointType } from '../services/websocket'
-import { getWebSocketDataStore } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 
 // 所有端点
 const ALL_ENDPOINTS: WSEndpointType[] = [
@@ -405,7 +405,7 @@ const ALL_ENDPOINTS: WSEndpointType[] = [
 // 响应式数据
 const mockEnabled = ref(false)
 const mockState = getMockServiceState()
-const dataStore = getWebSocketDataStore()
+const dataStore = useWebSocketDataStore()
 const refreshTimer = ref<number | null>(null)
 
 // 计算属性

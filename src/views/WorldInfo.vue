@@ -30,27 +30,27 @@
         <div class="overview-grid">
           <div class="overview-item">
             <div class="item-label">时间</div>
-            <div class="item-value">{{ worldData.time?.formatted_time || '未知' }}</div>
+            <div class="item-value">{{ world.time?.formatted_time || '未知' }}</div>
           </div>
           <div class="overview-item">
             <div class="item-label">天气</div>
-            <div class="item-value">{{ worldData.weather?.formatted_weather || '未知' }}</div>
+            <div class="item-value">{{ world.weather?.formatted_weather || '未知' }}</div>
           </div>
           <div class="overview-item">
             <div class="item-label">维度</div>
-            <div class="item-value">{{ worldData.location?.dimension || '未知' }}</div>
+            <div class="item-value">{{ world.location?.dimension || '未知' }}</div>
           </div>
           <div class="overview-item">
             <div class="item-label">生物群系</div>
-            <div class="item-value">{{ worldData.location?.biome || '未知' }}</div>
+            <div class="item-value">{{ world.location?.biome || '未知' }}</div>
           </div>
           <div class="overview-item">
             <div class="item-label">光照等级</div>
-            <div class="item-value">{{ worldData.location?.light_level || '未知' }}</div>
+            <div class="item-value">{{ world.location?.light_level || '未知' }}</div>
           </div>
           <div class="overview-item">
             <div class="item-label">游戏天数</div>
-            <div class="item-value">{{ worldData.time?.day_count || '未知' }}</div>
+            <div class="item-value">{{ world.time?.day_count || '未知' }}</div>
           </div>
         </div>
       </el-card>
@@ -144,7 +144,7 @@ import {
   subscribeWorldWS,
 } from '../services/websocket'
 import { reactive } from 'vue'
-import { useWebSocketData } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectSingleEndpoint,
@@ -152,7 +152,8 @@ import {
 } from '../services/globalWebSocketService'
 
 // 使用全局WebSocket数据存储
-const { worldData } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { world } = store
 const globalConnectionStatus = getGlobalConnectionStatus()
 
 // WebSocket管理器
@@ -162,8 +163,8 @@ const worldWSManager = getWebSocketManager('WORLD')
 const isConnected = computed(() => globalConnectionStatus.connectionStatus.WORLD || false)
 
 // 世界数据计算属性
-const nearbyBlocks = computed(() => worldData.nearby_blocks || [])
-const nearbyEntities = computed(() => worldData.nearby_entities || [])
+const nearbyBlocks = computed(() => world.nearby_blocks || [])
+const nearbyEntities = computed(() => world.nearby_entities || [])
 
 // 连接状态显示
 const connectionStatus = computed(() => {

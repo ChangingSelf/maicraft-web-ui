@@ -24,19 +24,19 @@
         <div class="basic-grid">
           <div class="basic-item">
             <div class="item-label">玩家名称</div>
-            <div class="item-value">{{ playerData.name || '未知' }}</div>
+            <div class="item-value">{{ player.name || '未知' }}</div>
           </div>
           <div class="basic-item">
             <div class="item-label">游戏模式</div>
-            <div class="item-value">{{ playerData.gamemode || '未知' }}</div>
+            <div class="item-value">{{ player.gamemode || '未知' }}</div>
           </div>
           <div class="basic-item">
             <div class="item-label">经验等级</div>
-            <div class="item-value">{{ playerData.level || 0 }}</div>
+            <div class="item-value">{{ player.level || 0 }}</div>
           </div>
           <div class="basic-item">
             <div class="item-label">经验值</div>
-            <div class="item-value">{{ playerData.experience || 0 }}</div>
+            <div class="item-value">{{ player.experience || 0 }}</div>
           </div>
         </div>
       </el-card>
@@ -54,7 +54,7 @@
             <div class="health-label">
               <span>生命值</span>
               <span class="health-text"
-                >{{ playerData.health || 0 }}/{{ playerData.max_health || 20 }}</span
+                >{{ player.health || 0 }}/{{ player.max_health || 20 }}</span
               >
             </div>
             <el-progress
@@ -67,9 +67,7 @@
           <div class="health-item">
             <div class="health-label">
               <span>饥饿值</span>
-              <span class="health-text"
-                >{{ playerData.food || 0 }}/{{ playerData.max_food || 20 }}</span
-              >
+              <span class="health-text">{{ player.food || 0 }}/{{ player.max_food || 20 }}</span>
             </div>
             <el-progress
               :percentage="getFoodPercentage()"
@@ -93,31 +91,29 @@
           <div class="coordinates">
             <div class="coord-item">
               <span class="coord-label">X:</span>
-              <span class="coord-value">{{ playerData.position?.x?.toFixed(2) || '0.00' }}</span>
+              <span class="coord-value">{{ player.position?.x?.toFixed(2) || '0.00' }}</span>
             </div>
             <div class="coord-item">
               <span class="coord-label">Y:</span>
-              <span class="coord-value">{{ playerData.position?.y?.toFixed(2) || '0.00' }}</span>
+              <span class="coord-value">{{ player.position?.y?.toFixed(2) || '0.00' }}</span>
             </div>
             <div class="coord-item">
               <span class="coord-label">Z:</span>
-              <span class="coord-value">{{ playerData.position?.z?.toFixed(2) || '0.00' }}</span>
+              <span class="coord-value">{{ player.position?.z?.toFixed(2) || '0.00' }}</span>
             </div>
           </div>
           <div class="orientation">
             <div class="orient-item">
               <span class="orient-label">偏航角:</span>
-              <span class="orient-value">{{ playerData.position?.yaw?.toFixed(1) || '0.0' }}°</span>
+              <span class="orient-value">{{ player.position?.yaw?.toFixed(1) || '0.0' }}°</span>
             </div>
             <div class="orient-item">
               <span class="orient-label">俯仰角:</span>
-              <span class="orient-value"
-                >{{ playerData.position?.pitch?.toFixed(1) || '0.0' }}°</span
-              >
+              <span class="orient-value">{{ player.position?.pitch?.toFixed(1) || '0.0' }}°</span>
             </div>
             <div class="orient-item">
               <span class="orient-label">接地状态:</span>
-              <span class="orient-value">{{ playerData.position?.on_ground ? '是' : '否' }}</span>
+              <span class="orient-value">{{ player.position?.on_ground ? '是' : '否' }}</span>
             </div>
           </div>
         </div>
@@ -135,21 +131,21 @@
           <div class="equipment-item">
             <div class="equip-slot">主手</div>
             <div class="equip-content">
-              <div v-if="playerData.equipment?.main_hand" class="equip-info">
-                <div class="equip-name">{{ playerData.equipment.main_hand.display_name }}</div>
+              <div v-if="player.equipment?.main_hand" class="equip-info">
+                <div class="equip-name">{{ player.equipment.main_hand.display_name }}</div>
                 <div class="equip-details">
-                  <span>数量: {{ playerData.equipment.main_hand.count }}</span>
-                  <span v-if="playerData.equipment.main_hand.damage"
-                    >耐久: {{ playerData.equipment.main_hand.damage }}/{{
-                      playerData.equipment.main_hand.max_damage
+                  <span>数量: {{ player.equipment.main_hand.count }}</span>
+                  <span v-if="player.equipment.main_hand.damage"
+                    >耐久: {{ player.equipment.main_hand.damage }}/{{
+                      player.equipment.main_hand.max_damage
                     }}</span
                   >
                 </div>
                 <el-progress
-                  v-if="playerData.equipment.main_hand.max_damage"
-                  :percentage="getDurabilityPercentage(playerData.equipment.main_hand)"
+                  v-if="player.equipment.main_hand.max_damage"
+                  :percentage="getDurabilityPercentage(player.equipment.main_hand)"
                   :stroke-width="6"
-                  :color="getDurabilityColor(playerData.equipment.main_hand)"
+                  :color="getDurabilityColor(player.equipment.main_hand)"
                   :show-text="false"
                 />
               </div>
@@ -160,13 +156,13 @@
           <div class="equipment-item">
             <div class="equip-slot">头盔</div>
             <div class="equip-content">
-              <div v-if="playerData.equipment?.helmet" class="equip-info">
-                <div class="equip-name">{{ playerData.equipment.helmet.display_name }}</div>
+              <div v-if="player.equipment?.helmet" class="equip-info">
+                <div class="equip-name">{{ player.equipment.helmet.display_name }}</div>
                 <div class="equip-details">
-                  <span>数量: {{ playerData.equipment.helmet.count }}</span>
-                  <span v-if="playerData.equipment.helmet.damage"
-                    >耐久: {{ playerData.equipment.helmet.damage }}/{{
-                      playerData.equipment.helmet.max_damage
+                  <span>数量: {{ player.equipment.helmet.count }}</span>
+                  <span v-if="player.equipment.helmet.damage"
+                    >耐久: {{ player.equipment.helmet.damage }}/{{
+                      player.equipment.helmet.max_damage
                     }}</span
                   >
                 </div>
@@ -178,10 +174,10 @@
           <div class="equipment-item">
             <div class="equip-slot">胸甲</div>
             <div class="equip-content">
-              <div v-if="playerData.equipment?.chestplate" class="equip-info">
-                <div class="equip-name">{{ playerData.equipment.chestplate.display_name }}</div>
+              <div v-if="player.equipment?.chestplate" class="equip-info">
+                <div class="equip-name">{{ player.equipment.chestplate.display_name }}</div>
                 <div class="equip-details">
-                  <span>数量: {{ playerData.equipment.chestplate.count }}</span>
+                  <span>数量: {{ player.equipment.chestplate.count }}</span>
                 </div>
               </div>
               <div v-else class="equip-empty">空</div>
@@ -191,10 +187,10 @@
           <div class="equipment-item">
             <div class="equip-slot">护腿</div>
             <div class="equip-content">
-              <div v-if="playerData.equipment?.leggings" class="equip-info">
-                <div class="equip-name">{{ playerData.equipment.leggings.display_name }}</div>
+              <div v-if="player.equipment?.leggings" class="equip-info">
+                <div class="equip-name">{{ player.equipment.leggings.display_name }}</div>
                 <div class="equip-details">
-                  <span>数量: {{ playerData.equipment.leggings.count }}</span>
+                  <span>数量: {{ player.equipment.leggings.count }}</span>
                 </div>
               </div>
               <div v-else class="equip-empty">空</div>
@@ -204,10 +200,10 @@
           <div class="equipment-item">
             <div class="equip-slot">靴子</div>
             <div class="equip-content">
-              <div v-if="playerData.equipment?.boots" class="equip-info">
-                <div class="equip-name">{{ playerData.equipment.boots.display_name }}</div>
+              <div v-if="player.equipment?.boots" class="equip-info">
+                <div class="equip-name">{{ player.equipment.boots.display_name }}</div>
                 <div class="equip-details">
-                  <span>数量: {{ playerData.equipment.boots.count }}</span>
+                  <span>数量: {{ player.equipment.boots.count }}</span>
                 </div>
               </div>
               <div v-else class="equip-empty">空</div>
@@ -222,15 +218,15 @@
           <div class="card-header">
             <el-icon><Box /></el-icon>
             <span
-              >物品栏 ({{ playerData.inventory?.occupied_slots || 0 }}/{{
-                playerData.inventory?.total_slots || 36
+              >物品栏 ({{ player.inventory?.occupied_slots || 0 }}/{{
+                player.inventory?.total_slots || 36
               }})</span
             >
           </div>
         </template>
-        <div v-if="playerData.inventory?.items?.length > 0" class="inventory-grid">
+        <div v-if="player.inventory?.items?.length > 0" class="inventory-grid">
           <el-card
-            v-for="item in playerData.inventory.items"
+            v-for="item in player.inventory.items"
             :key="item.slot"
             class="inventory-item"
             size="small"
@@ -274,7 +270,7 @@ import {
   subscribePlayerWS,
 } from '../services/websocket'
 import { reactive } from 'vue'
-import { useWebSocketData } from '../stores/websocketData'
+import { useWebSocketDataStore } from '../stores/websocketData'
 import {
   getGlobalConnectionStatus,
   connectSingleEndpoint,
@@ -299,11 +295,12 @@ interface InventoryItem {
 }
 
 // 使用全局WebSocket数据存储
-const { playerData } = useWebSocketData()
+const store = useWebSocketDataStore()
+const { player } = store
 const globalConnectionStatus = getGlobalConnectionStatus()
 
 // 玩家数据计算属性（保持兼容性）
-const playerDataComputed = computed(() => playerData)
+const playerComputed = computed(() => player)
 
 // WebSocket管理器
 const playerWSManager = getWebSocketManager('PLAYER')
@@ -358,14 +355,22 @@ const disconnect = () => {
 
 // 获取生命值百分比
 const getHealthPercentage = () => {
-  if (!playerData.health || !playerData.max_health) return 0
-  return (playerData.health / playerData.max_health) * 100
+  if (!player?.health || !player?.max_health) return 0
+  const health = Number(player.health)
+  const maxHealth = Number(player.max_health)
+  if (maxHealth <= 0) return 0
+  const percentage = (health / maxHealth) * 100
+  return Math.max(0, Math.min(100, percentage)) // 确保在 0-100 范围内
 }
 
 // 获取饥饿值百分比
 const getFoodPercentage = () => {
-  if (!playerData.food || !playerData.max_food) return 0
-  return (playerData.food / playerData.max_food) * 100
+  if (!player?.food || !player?.max_food) return 0
+  const food = Number(player.food)
+  const maxFood = Number(player.max_food)
+  if (maxFood <= 0) return 0
+  const percentage = (food / maxFood) * 100
+  return Math.max(0, Math.min(100, percentage)) // 确保在 0-100 范围内
 }
 
 // 获取生命值颜色
@@ -386,8 +391,12 @@ const getFoodColor = () => {
 
 // 获取耐久度百分比
 const getDurabilityPercentage = (item: any) => {
-  if (!item.damage || !item.max_damage) return 100
-  return ((item.max_damage - item.damage) / item.max_damage) * 100
+  if (!item?.damage || !item?.max_damage) return 100
+  const maxDamage = Number(item.max_damage)
+  const damage = Number(item.damage)
+  if (maxDamage <= 0) return 100
+  const percentage = ((maxDamage - damage) / maxDamage) * 100
+  return Math.max(0, Math.min(100, percentage)) // 确保在 0-100 范围内
 }
 
 // 获取耐久度颜色
