@@ -80,6 +80,14 @@
           </template>
         </el-menu-item>
 
+        <!-- Agent 管理 -->
+        <el-menu-item index="agent-manager">
+          <el-icon><VideoPlay /></el-icon>
+          <template #title>
+            <span>Agent 管理</span>
+          </template>
+        </el-menu-item>
+
         <!-- 调试工具 -->
         <el-sub-menu index="debug-tools">
           <template #title>
@@ -443,6 +451,9 @@ const handleSelect = (index: string) => {
       break
     case 'settings':
       router.push('/settings')
+      break
+    case 'agent-manager':
+      router.push('/agent-manager')
       break
   }
 }

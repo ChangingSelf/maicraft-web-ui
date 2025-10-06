@@ -8,6 +8,7 @@ import WorldPlayerDashboard from '../views/WorldPlayerDashboard.vue'
 import Changelog from '../views/Changelog.vue'
 import TokenUsage from '../views/TokenUsage.vue'
 import TaskManager from '../views/TaskManager.vue'
+import AgentManager from '../views/AgentManager.vue'
 import WebSocketDebugger from '../views/WebSocketDebugger.vue'
 import HeartbeatTest from '../views/HeartbeatTest.vue'
 import WebSocketMonitor from '../views/WebSocketMonitor.vue'
@@ -67,6 +68,15 @@ const router = createRouter({
       component: TaskManager,
       meta: {
         title: '任务管理',
+      },
+    },
+    // Agent 管理
+    {
+      path: '/agent-manager',
+      name: 'agent-manager',
+      component: AgentManager,
+      meta: {
+        title: 'Agent 管理',
       },
     },
     // 设置页面（占位）

@@ -7,7 +7,9 @@
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:proxy\"",
+    "dev:frontend": "vite",
+    "dev:proxy": "cd proxy && npm run dev",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "build-only": "vite build",
@@ -19,7 +21,9 @@
     "version:major": "node scripts/version-manager.js major",
     "version:info": "node scripts/version-manager.js info",
     "backup:list": "node scripts/restore-backup.js list",
-    "backup:latest": "node scripts/restore-backup.js latest"
+    "backup:latest": "node scripts/restore-backup.js latest",
+    "proxy:install": "cd proxy && npm install",
+    "proxy:start": "cd proxy && npm start"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -42,6 +46,7 @@
     "@vue/eslint-config-prettier": "^10.2.0",
     "@vue/eslint-config-typescript": "^14.6.0",
     "@vue/tsconfig": "^0.7.0",
+    "concurrently": "^8.2.2",
     "eslint": "^9.31.0",
     "eslint-plugin-vue": "~10.3.0",
     "jiti": "^2.4.2",
