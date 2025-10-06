@@ -1,17 +1,31 @@
 {
-  "current": "0.20.1",
+  "current": "0.21.0",
   "name": "Maicraft Web UI",
   "description": "Minecraft 服务器监控和管理界面",
-  "buildDate": "2025-10-05",
-  "buildTime": "09:52:41",
+  "buildDate": "2025-10-06",
+  "buildTime": "23:06:49",
   "buildInfo": "Vue 3 + TypeScript + Vite",
   "author": "ChangingSelf",
   "repository": "https://github.com/ChangingSelf/maicraft-web-ui",
   "license": "MIT",
   "changelog": {
-    "lastUpdated": "2025-10-05",
-    "totalVersions": 35,
+    "lastUpdated": "2025-10-06",
+    "totalVersions": 36,
     "versions": [
+      {
+        "version": "0.21.0",
+        "date": "2025-10-06",
+        "type": "minor",
+        "changes": {
+          "refactor": [
+            "统一状态管理的实现代码"
+          ],
+          "feat": [
+            "添加在webui直接启动agent的功能"
+          ]
+        },
+        "summary": "🔧 重构 - 统一状态管理的实现代码; ✨ 新功能 - 添加在webui直接启动agent的功能"
+      },
       {
         "version": "0.20.1",
         "date": "2025-10-05",
