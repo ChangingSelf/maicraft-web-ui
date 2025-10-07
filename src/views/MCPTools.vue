@@ -1,5 +1,8 @@
 <template>
   <div class="mcp-tools-page">
+    <!-- 页面头部 -->
+    <PageHeader title="MCP工具" description="管理和调用MCP服务器工具" />
+
     <!-- 主要内容区域 -->
     <div class="main-content">
       <!-- 左侧工具列表面板 -->
@@ -53,6 +56,7 @@ import { ref, onMounted, reactive, computed } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { mcpApi, type MCPTool, type ToolCall } from '@/services/mcp'
 import { ToolList, ToolDetail, HistoryPanel, CallDetail } from '@/components/mcp'
+import { PageHeader } from '@/components/common'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({
@@ -223,8 +227,7 @@ const showCallDetail = (call: ToolCall) => {
 
 // 组件挂载时加载数据
 onMounted(() => {
-  loadTools()
-  loadCallHistory()
+  // 不再自动刷新，等待用户手动触发
 })
 </script>
 

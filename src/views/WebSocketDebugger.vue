@@ -1,9 +1,8 @@
 <template>
   <div class="ws-debugger-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <h2>WebSocket 调试工具</h2>
-      <div class="header-actions">
+    <PageHeader title="WebSocket 调试工具">
+      <template #actions>
         <el-button
           type="primary"
           :icon="Connection"
@@ -17,8 +16,8 @@
           断开
         </el-button>
         <el-button type="info" :icon="Delete" @click="clearMessages"> 清空消息 </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 连接配置面板 -->
     <div class="config-panel">
@@ -202,6 +201,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { Connection, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { PageHeader } from '@/components/common'
 import { createWebSocketManager } from '@/services/websocket'
 
 // WebSocket端点配置

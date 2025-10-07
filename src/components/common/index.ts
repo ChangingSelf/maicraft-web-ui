@@ -2,7 +2,6 @@
 export { default as PageHeader } from './PageHeader.vue'
 export { default as StatusDisplay } from './StatusDisplay.vue'
 export { default as ConnectionStatus } from './ConnectionStatus.vue'
-export { default as PageHeaderWithConnection } from './PageHeaderWithConnection.vue'
 export { default as DataGrid, type DataGridItem } from './DataGrid.vue'
 export { default as ProgressCard } from './ProgressCard.vue'
 export { default as ItemCard, type ItemData } from './ItemCard.vue'

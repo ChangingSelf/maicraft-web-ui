@@ -1,9 +1,8 @@
 <template>
   <div class="heartbeat-test-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <h2>心跳机制测试</h2>
-      <div class="header-actions">
+    <PageHeader title="心跳机制测试">
+      <template #actions>
         <el-button
           type="primary"
           :icon="VideoPlay"
@@ -17,8 +16,8 @@
           停止测试
         </el-button>
         <el-button type="info" :icon="Delete" @click="clearLogs"> 清空日志 </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 测试配置 -->
     <div class="test-config">
@@ -121,6 +120,7 @@
 import { ref, reactive, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import { VideoPlay, VideoPause, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { PageHeader } from '@/components/common'
 import { createWebSocketManager } from '@/services/websocket'
 
 // WebSocket端点配置

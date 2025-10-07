@@ -1,9 +1,8 @@
 <template>
   <div class="settings-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <h2>配置管理</h2>
-      <div class="header-actions">
+    <PageHeader title="配置管理">
+      <template #actions>
         <el-button type="primary" :icon="Check" @click="applySettings" :loading="saving">
           应用配置
         </el-button>
@@ -12,8 +11,8 @@
           导入配置
         </el-button>
         <el-button type="danger" :icon="RefreshLeft" @click="resetConfig"> 重置配置 </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 配置内容 -->
     <div class="config-content">
@@ -198,6 +197,7 @@
 import { ref, reactive, onMounted, watch } from 'vue'
 import { Refresh, Download, Upload, RefreshLeft, Check } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { PageHeader } from '@/components/common'
 import { useSettingsStore } from '../stores/settings'
 
 // 定义组件名称，供keep-alive识别

@@ -1,16 +1,15 @@
 <template>
   <div class="player-status">
-    <PageHeader title="玩家状态">
-      <template #actions>
-        <ConnectionStatus
-          :is-connected="isConnected"
-          :connecting="connecting"
-          :disconnecting="disconnecting"
-          @connect="connect"
-          @disconnect="disconnect"
-        />
-      </template>
-    </PageHeader>
+    <PageHeader
+      title="玩家状态"
+      :showConnectionStatus="true"
+      :showConnectionButtons="true"
+      :isConnected="isConnected"
+      :connecting="connecting"
+      :disconnecting="disconnecting"
+      @connect="connect"
+      @disconnect="disconnect"
+    />
 
     <div class="player-content">
       <!-- 玩家基本信息 -->
@@ -262,7 +261,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { User, Location, Box, CircleCheck, CircleClose } from '@element-plus/icons-vue'
-import { PageHeader, ConnectionStatus } from '@/components/common'
+import { PageHeader } from '@/components/common'
 import {
   getWebSocketManager,
   connectPlayerWS,

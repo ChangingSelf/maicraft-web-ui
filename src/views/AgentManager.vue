@@ -1,10 +1,7 @@
 <template>
   <div class="agent-manager-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <h2>Agent 管理</h2>
-      <div class="header-description">启动和管理 Maicraft Agent 进程</div>
-    </div>
+    <PageHeader title="Agent 管理" description="启动和管理 Maicraft Agent 进程" />
 
     <!-- 主要内容 -->
     <div class="agent-content">
@@ -251,6 +248,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed, watch } from 'vue'
 import { VideoPlay, VideoPause, Refresh } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { PageHeader } from '@/components/common'
 
 // 定义组件名称，供keep-alive识别
 defineOptions({

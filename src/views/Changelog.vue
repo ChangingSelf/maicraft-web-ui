@@ -1,15 +1,19 @@
 <template>
   <div class="changelog-page">
-    <div class="page-header">
-      <h1 class="page-title">
-        <el-icon class="title-icon"><InfoFilled /></el-icon>
-        版本信息与更新日志 ✨
-      </h1>
-      <div class="version-info">
-        <el-tag type="primary" size="large">🚀 当前版本: {{ currentVersion }}</el-tag>
-        <el-tag type="info" size="small">最后更新: {{ lastUpdated }}</el-tag>
-      </div>
-    </div>
+    <PageHeader>
+      <template #default>
+        <h1 class="page-title">
+          <el-icon class="title-icon"><InfoFilled /></el-icon>
+          版本信息与更新日志 ✨
+        </h1>
+      </template>
+      <template #actions>
+        <div class="version-info">
+          <el-tag type="primary" size="large">🚀 当前版本: {{ currentVersion }}</el-tag>
+          <el-tag type="info" size="small">最后更新: {{ lastUpdated }}</el-tag>
+        </div>
+      </template>
+    </PageHeader>
 
     <div class="content-wrapper">
       <!-- 当前版本卡片 -->
@@ -131,6 +135,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { PageHeader } from '@/components/common'
 import {
   InfoFilled,
   Star,

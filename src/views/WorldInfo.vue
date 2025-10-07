@@ -1,8 +1,7 @@
 <template>
   <div class="world-info">
-    <div class="page-header">
-      <h2>世界信息</h2>
-      <div class="header-actions">
+    <PageHeader title="世界信息" :showConnectionStatus="true" :isConnected="isConnected">
+      <template #actions>
         <el-button type="primary" @click="connect" v-if="!isConnected">
           <el-icon><VideoPlay /></el-icon>
           连接
@@ -11,12 +10,8 @@
           <el-icon><VideoPause /></el-icon>
           断开
         </el-button>
-        <el-tag :type="connectionStatus.type" size="large">
-          <el-icon><component :is="connectionStatus.icon" /></el-icon>
-          {{ connectionStatus.text }}
-        </el-tag>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <div class="world-content">
       <!-- 世界概览 -->
@@ -128,6 +123,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { PageHeader } from '@/components/common'
 import {
   VideoPlay,
   VideoPause,

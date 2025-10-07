@@ -2,9 +2,10 @@
   <!-- 世界与玩家状态仪表板 - 合并页面 -->
   <div class="dashboard">
     <!-- 页面头部 - 统一的连接管理 -->
-    <PageHeaderWithConnection
+    <PageHeader
       title="世界与玩家状态"
-      :is-connected="isAnyConnected"
+      :showConnectionButtons="true"
+      :isConnected="isAnyConnected"
       :connecting="connecting"
       :disconnecting="disconnecting"
       @connect="connectAll"
@@ -259,7 +260,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { House, User, CircleCheck, Compass, Tools, Box, Share } from '@element-plus/icons-vue'
 import {
-  PageHeaderWithConnection,
+  PageHeader,
   DataGrid,
   type DataGridItem,
   ProgressCard,

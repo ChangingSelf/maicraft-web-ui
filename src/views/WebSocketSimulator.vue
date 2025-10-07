@@ -1,12 +1,11 @@
 <template>
   <div class="websocket-simulator">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <div class="header-left">
-        <h2>WebSocket 模拟器</h2>
-        <p class="page-description">用于在没有真实服务端的情况下测试WebSocket功能和数据处理逻辑</p>
-      </div>
-      <div class="header-actions">
+    <PageHeader
+      title="WebSocket 模拟器"
+      description="用于在没有真实服务端的情况下测试WebSocket功能和数据处理逻辑"
+    >
+      <template #actions>
         <div class="mode-switch-container">
           <span class="mode-label">{{ mockEnabled ? '模拟模式' : '真实模式' }}</span>
           <el-switch
@@ -26,8 +25,8 @@
         >
           {{ allConnected ? '断开全部' : '连接全部' }}
         </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 快速开始指南 -->
     <el-card v-if="!mockEnabled" class="quick-start-card" shadow="never">
@@ -360,6 +359,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { PageHeader } from '@/components/common'
 import {
   CircleCheck,
   CircleClose,

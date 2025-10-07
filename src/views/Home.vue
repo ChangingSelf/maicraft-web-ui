@@ -1,10 +1,7 @@
 <template>
   <div class="home">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h1 class="page-title">Maicraft Web UI</h1>
-      <p class="page-description">选择功能模块开始使用</p>
-    </div>
+    <PageHeader title="Maicraft Web UI" description="选择功能模块开始使用" />
 
     <!-- 页面卡片网格 -->
     <div class="page-grid">
@@ -175,6 +172,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { PageHeader } from '@/components/common'
 import {
   Monitor,
   Document,

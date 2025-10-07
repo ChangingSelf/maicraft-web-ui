@@ -1,9 +1,8 @@
 <template>
   <div class="websocket-monitor">
     <!-- 页面标题 -->
-    <div class="page-header">
-      <h2>WebSocket 连接监控</h2>
-      <div class="header-actions">
+    <PageHeader title="WebSocket 连接监控">
+      <template #actions>
         <el-button
           :type="allConnected ? 'danger' : 'primary'"
           :loading="isConnecting"
@@ -11,9 +10,8 @@
         >
           {{ allConnected ? '断开全部' : '连接全部' }}
         </el-button>
-        <el-button @click="refreshStatus" :icon="RefreshRight"> 刷新状态 </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 全局状态概览 -->
     <el-card class="overview-card" shadow="never">
@@ -217,6 +215,7 @@
 import { ref, computed, onMounted, onUnmounted, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { CircleCheck, CircleClose, RefreshRight } from '@element-plus/icons-vue'
+import { PageHeader } from '@/components/common'
 import {
   getGlobalConnectionStatus,
   connectAllWebSockets,

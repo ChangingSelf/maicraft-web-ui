@@ -1,73 +1,19 @@
 <template>
   <div class="task-manager-page">
     <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-title">
-        <h2>任务管理</h2>
-        <div class="connection-status">
-          <el-tag :type="isConnected ? 'success' : 'danger'" size="small">
-            {{ isConnected ? '已连接' : '未连接' }}
-          </el-tag>
-          <span v-if="connectionError" class="connection-error">{{ connectionError }}</span>
-          <el-button
-            v-if="!isConnected && connectionError"
-            size="small"
-            type="text"
-            @click="showConnectionHelp"
-            style="margin-left: 8px"
-          >
-            连接帮助
-          </el-button>
-        </div>
-      </div>
-      <div class="header-actions">
-        <!-- 连接按钮 - 当未连接时显示 -->
+    <PageHeader title="任务管理" :showConnectionStatus="true" :isConnected="isConnected">
+      <template #actions>
         <el-button
           v-if="!isConnected"
-          type="warning"
+          type="primary"
           :icon="Connection"
           @click="connectToTaskService"
           :loading="connecting"
         >
-          连接服务
+          连接
         </el-button>
-
-        <!-- 主要操作按钮 -->
-        <el-button
-          type="primary"
-          :icon="Plus"
-          @click="showCreateDialog = true"
-          :disabled="!isConnected"
-        >
-          新建任务
-        </el-button>
-        <el-button
-          type="success"
-          :icon="List"
-          @click="showBatchDialog = true"
-          :disabled="!isConnected"
-        >
-          批量操作
-        </el-button>
-        <el-button
-          type="danger"
-          :icon="Delete"
-          @click="clearAllTasks"
-          :disabled="tasks.length === 0 || !isConnected"
-        >
-          清空所有
-        </el-button>
-        <el-button
-          type="info"
-          :icon="Refresh"
-          @click="refreshTasks"
-          :loading="loading"
-          :disabled="!isConnected"
-        >
-          刷新
-        </el-button>
-      </div>
-    </div>
+      </template>
+    </PageHeader>
 
     <!-- 任务统计 -->
     <div class="stats-section">
@@ -141,18 +87,48 @@
         <template #header>
           <div class="card-header">
             <span>任务列表</span>
-            <div class="filters">
-              <el-select
-                v-model="statusFilter"
-                placeholder="状态筛选"
-                clearable
-                style="width: 120px"
+            <div class="header-actions">
+              <el-button
+                type="primary"
+                :icon="Plus"
+                @click="showCreateDialog = true"
+                :disabled="!isConnected"
+                size="small"
               >
-                <el-option label="全部" value="" />
-                <el-option label="待处理" value="pending" />
-                <el-option label="进行中" value="in_progress" />
-                <el-option label="已完成" value="completed" />
-              </el-select>
+                新建任务
+              </el-button>
+              <el-button
+                type="success"
+                :icon="List"
+                @click="showBatchDialog = true"
+                :disabled="!isConnected"
+                size="small"
+              >
+                批量操作
+              </el-button>
+              <el-button
+                type="danger"
+                :icon="Delete"
+                @click="clearAllTasks"
+                :disabled="tasks.length === 0 || !isConnected"
+                size="small"
+              >
+                清空所有
+              </el-button>
+              <div class="filters">
+                <el-select
+                  v-model="statusFilter"
+                  placeholder="状态筛选"
+                  clearable
+                  style="width: 120px"
+                  size="small"
+                >
+                  <el-option label="全部" value="" />
+                  <el-option label="待处理" value="pending" />
+                  <el-option label="进行中" value="in_progress" />
+                  <el-option label="已完成" value="completed" />
+                </el-select>
+              </div>
             </div>
           </div>
         </template>
@@ -358,7 +334,6 @@
                 {{ isConnected ? '已连接' : '未连接' }}
               </span>
             </p>
-            <p v-if="connectionError"><strong>错误:</strong> {{ connectionError }}</p>
           </div>
 
           <h4>🔍 故障排除步骤</h4>
@@ -390,6 +365,7 @@
 
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, onBeforeUnmount } from 'vue'
+import { PageHeader } from '@/components/common'
 import {
   Plus,
   List,
@@ -480,9 +456,6 @@ const { tasks: globalTasks } = store
 const tasks = computed(() => globalTasks)
 
 const loading = ref(false)
-
-// 不再使用旧的taskService的错误状态
-const connectionError = computed(() => null)
 
 // 使用全局连接状态
 const globalConnectionStatus = getGlobalConnectionStatus()
@@ -794,11 +767,6 @@ onMounted(async () => {
   console.log('任务管理器已加载，请手动连接任务服务')
 })
 
-// 显示连接帮助
-const showConnectionHelp = () => {
-  showHelpDialog.value = true
-}
-
 // 组件卸载前不需要特殊处理，全局管理器会处理连接
 onBeforeUnmount(() => {
   console.log('任务管理器组件卸载')
@@ -812,38 +780,15 @@ onBeforeUnmount(() => {
   margin: 0 auto;
 }
 
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 24px;
-}
-
-.header-title {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.page-header h2 {
-  margin: 0;
-  color: #333;
-}
-
-.connection-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.connection-error {
-  color: #f56c6c;
-  font-size: 12px;
-}
-
 .header-actions {
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.tasks-card .card-header .header-actions {
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .stats-section {
@@ -1077,12 +1022,6 @@ onBeforeUnmount(() => {
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 16px;
-  }
-
   .header-actions {
     width: 100%;
     justify-content: flex-end;

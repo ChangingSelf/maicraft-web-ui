@@ -1,21 +1,15 @@
 <template>
   <div class="token-usage-page">
-    <PageHeader title="Token 使用量监控">
-      <template #actions>
-        <el-button type="primary" :icon="Refresh" @click="refreshUsage" :loading="loading">
-          刷新数据
-        </el-button>
-        <ConnectionStatus
-          :is-connected="isConnected"
-          :connecting="connecting"
-          :disconnecting="disconnecting"
-          connect-text="开始监控"
-          disconnect-text="停止监控"
-          @connect="startMonitoring"
-          @disconnect="stopMonitoring"
-        />
-      </template>
-    </PageHeader>
+    <PageHeader
+      title="Token 使用量监控"
+      :showConnectionStatus="true"
+      :showConnectionButtons="true"
+      :isConnected="isConnected"
+      :connecting="connecting"
+      :disconnecting="disconnecting"
+      @connect="startMonitoring"
+      @disconnect="stopMonitoring"
+    />
 
     <!-- 监控控制面板 -->
     <div class="control-panel">
@@ -227,7 +221,7 @@
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { Refresh, Coin, Document, ChatDotRound, User } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { PageHeader, ConnectionStatus } from '@/components/common'
+import { PageHeader } from '@/components/common'
 import { createWebSocketManager, getWebSocketManager } from '@/services/websocket'
 import { useWebSocketDataStore } from '@/stores/websocketData'
 import {
