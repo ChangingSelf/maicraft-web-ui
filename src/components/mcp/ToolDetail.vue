@@ -34,7 +34,12 @@
 
           <!-- 参数配置 -->
           <div v-if="tool.inputSchema?.properties" class="tool-section parameters-section">
-            <h4>参数配置</h4>
+            <div class="parameters-header">
+              <h4>参数配置</h4>
+              <el-button @click="copyJsonParams" size="small" type="primary" plain>
+                复制JSON参数
+              </el-button>
+            </div>
             <div class="parameters-form">
               <el-form
                 ref="formRef"
@@ -171,6 +176,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
+import { ElMessage } from 'element-plus'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { MCPTool, ToolCall } from '@/services/mcp'
 import { CallDetail } from '@/components/mcp'
@@ -309,6 +315,48 @@ const handleExecute = async () => {
   }
 }
 
+// 复制JSON参数到剪贴板
+const copyJsonParams = async () => {
+  if (!props.tool?.inputSchema?.properties) return
+
+  try {
+    // 获取当前有效的参数
+    const validParams: Record<string, any> = {}
+
+    Object.keys(props.tool.inputSchema.properties).forEach((paramName) => {
+      const value = formData[paramName]
+      if (value !== undefined && value !== '' && value !== null) {
+        // 处理对象和数组类型的JSON字符串
+        const paramInfo = props.tool!.inputSchema!.properties[paramName]
+        if (
+          (paramInfo.type === 'object' || paramInfo.type === 'array') &&
+          typeof value === 'string'
+        ) {
+          try {
+            validParams[paramName] = JSON.parse(value)
+          } catch {
+            validParams[paramName] = value
+          }
+        } else {
+          validParams[paramName] = value
+        }
+      }
+    })
+
+    // 格式化为JSON字符串
+    const jsonString = JSON.stringify(validParams, null, 2)
+
+    // 复制到剪贴板
+    await navigator.clipboard.writeText(jsonString)
+
+    // 显示成功消息
+    ElMessage.success(`参数JSON已复制到剪贴板 (${Object.keys(validParams).length}个参数)`)
+  } catch (error) {
+    console.error('复制JSON参数失败:', error)
+    ElMessage.error('复制参数失败')
+  }
+}
+
 // 监听工具变化，重置表单
 watch(
   () => props.tool,
@@ -438,6 +486,13 @@ watch(
   margin: 0;
   color: #666;
   line-height: 1.6;
+}
+
+.parameters-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .parameters-form {
